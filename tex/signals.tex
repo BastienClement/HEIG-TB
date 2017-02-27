@@ -1,10 +1,256 @@
 \chapter{Signaux}
 
-\section{Définition}
+\section{Introduction}
+
+	La construction d'interfaces utilisateur met en évidence la problématique de la gestion des interactions et du maintient de la cohérence des informations présentées. En effet, les actions effectuées par l'utilisateur modifient l'état du logiciel et requièrent alors une actualisation de l'affichage. Lorsque l'interface devient complexe, maintenir une cohérence globale présente une difficulté de plus en plus importante. Le problème est exacerbé lorsque les modifications de l'état ne proviennent pas uniquement de l'utilisateur mais peuvent également survenir par l'action de processus asynchrones tel qu'une tâche de fond ou une connexion réseau.
+	
+	La séparation classique Modèle-Vue-Contrôleur repose généralement la notion d'\emph{Observable} et d'\emph{Observateur} pour lier Vue et Modèle. Ce concept présente cependant de multiples inconvénients tel que la promotion d'effets de bord, une diminution de l'encapsulation, une verbosité excessive; le rendant ainsi fastidieux à l'utilisation et sujet à erreurs\cite{odersky2012}.
+	
+	Ingo Maier et Martin Odersky proposent ainsi une approche plus fonctionnelle et composable avec la bibliothèque \emph{Scala.React}\cite{scala-react} avec entre autres la notion de signal: une valeur pouvant varier avec le temps. Cependant les signaux ne sont qu'un des multiples outils mis à disposition et l'utilisation de la bibliothèque se révèle être excessivement complexe, même dans les cas les plus simples\cite[\small Related~Work]{scala.rx}.
+	
+	Partant de ce constat, Li Haoyi a ainsi développé \emph{Scala.Rx}\cite{scala.rx}: une réimplémentation simplifiée du concept de signaux avec une emphase sur la simplicité, à la fois au niveau de la conception que de l'utilisation. Cependant, par simplicité, plusieurs limitations ont été volontairement imposées et se révèlent être particulièrement gênantes dans le cadre de ce projet.
+	
+	Xuen implémente ainsi un concept de signaux largement basés sur ceux de \emph{Scala.Rx}, mais dont les fonctionnalités ont été spécifiquement adaptées à leurs utilisation dans le cadre du développement d'interfaces utilisateur.
+
+\section{Définition théorique}
+	
+	Un \code{Signal[T]} représente une information de type \code{T} dont la disponibilité ou la valeur peut varier avec le temps.
+	À tout moment, un signal se trouve dans l'un des deux états suivants:
+	\begin{enumerate}
+		\item \code{Undefined}: le signal ne possède pas de valeur définie,
+		\item \code{Defined(value)}: le signal possède actuellement la valeur \code{value}
+	\end{enumerate}
+
+	Il peut être vu comme une extension de \code{Future[T]}. De façon similaire, il représente la présence ou l'absence d'information au fil du temps, mais il est autorisé à changer d'état infiniment alors que l'état d'un \code{Future} est figé une fois celui-ci résolu.
+	
+	\code{Signal[T]} est covariant avec son paramètre de type \code{T}. L'interface exposée ne permettant que l'accès à la valeur du signal ou sa transformation par le biais de la construction d'un nouveau signal, une instance \code{Signal[B]} est substituable à \code{Signal[A]} si \code{B <: A}.
+	
+	L'état d'un signal peut être dépendant de l'état d'un ou plusieurs autres signaux. Il constitue alors un signal \emph{enfant} associé à un ensemble de signaux \emph{parents}. Cet ensemble peut varier dynamiquement en fonction de la valeur des ces signaux mais ne peut devenir nul. Un signal enfant ne peut changer d'état que lorsque au moins l'un des ses signaux parents change d'état.
+	
+	À l'inverse, un signal qui ne dépend d'aucun autre est appelé une \emph{source}. Le changement d'état d'un signal source ne peut s'opérer que par une mutation explicite, extérieur au système de signaux.
+	
+	La classification d'un signal en tant que signal source ou signal enfant est statique, il n'est pas autorisé pour un signal de transitionner d'une classe à l'autre après sa définition.
+	
+	Les signaux sont des constructions fonctionnelles semi-pures. Puisqu'ils encodent la notion de variabilité, ils sont naturellement dépendant du temps en tant qu'état global. Plus spécifiquement, ils dépendent d'un \emph{indice de génération} spécifique à ce signal désigné par $\gamma_s \in \Gamma_s$ qui est associé à chaque changement potentiel d'état du signal.
+	
+	Dans le cas d'un signal enfant, l'indice de génération est défini comme un $n$-uplet constitué des indices de générations de chaque signaux parents sur lesquels il est dépendant. De cette façon, l'indice et donc l'état des signaux parent est encodé dans l'indice du signal enfant et la dépendance vers d'autres signaux ne compromet pas sa pureté:
+	\[
+		\mathbb{D}^\gamma_{child} = \{ a, b, \dots \} \implies \Gamma_{child} = \Gamma_a \times \Gamma_b \times \dots
+	\]
+	avec $\mathbb{D}^\gamma_{a}$ l'ensemble des signaux envers lesquels $a$ est dépendant pour l'indice de génération \gamma. Par définition $|\mathbb{D}^\gamma_{a}| > 0 \iff a$ est un signal enfant.
+	
+	Dans le cas d'un signal source, l'indice de génération est une valeur abstraite et distincte pour chaque changement d'état.
+	\[
+		\mathbb{D}^\gamma_{source} = \emptyset \implies \forall \alpha \in \Gamma_{source}, \forall \beta \in Signals, (\alpha \notin \Gamma_\beta) \lor (\beta = source)
+	\]
+	Un signal peut alors être considéré comme une fonction pure $\Gamma_{sig} \to State_{[T]}$ associant à un indice de génération spécifique un état précis dont la valeur, si elle est définie, est de type $T$.
+	\[
+		sig(\gamma_{sig})\colon \Gamma_{sig} \to State_{[T]} = state \in \{ Undefined, Defined_{[T]}(value) \}
+	\]
+	Les changements d'état d'un signal sont des événements séquentiels. L'ensemble des indices de génération de ce signal forment ainsi un ensemble ordonné sur lequel il est possible de définir la fonction
+	\begin{align*}
+		\gamma^*_{sig} = prev(\gamma_{sig}) &\colon \Gamma_{sig} \to \Gamma_{sig}\\
+		& = \begin{cases}
+			\gamma^*_{sig} & \text{si }
+				 \exists \gamma^*_{sig}, \forall \gamma^\alpha_{sig} < \gamma_{sig}, (\gamma^\alpha_{sig} \leq \gamma^*_{sig})\\
+			\varnothing & \text{sinon}
+		\end{cases}
+	\end{align*}
+	associant à chaque indice $\gamma_{sig}$ l'indice $\gamma^*_{sig}$ associé à l'état qui précédait immédiatement l'état associé à l'indice $\gamma_{sig}$. Cette propriété autorise un signal à être défini non seulement en fonction des états actuels d'autres signaux, mais aussi de leurs états antérieurs.
+	
+	\begin{figure}
+		\begin{align*}
+			hold (sig) &\colon Signal_{[T]} \to Signal_{[T]} \\
+			           &\colon (\Gamma_{sig} \to State_{[T]}) \to \Gamma_{sig} \to State_{[T]} \\
+			           &= \gamma \mapsto \begin{cases}
+			           		sig(\gamma) & \text{si } sig(\gamma) \text{ est défini} \\
+			           		hold(sig)(\gamma^*) & \text{sinon si } \gamma^* \ne \varnothing \\
+			           		Undefined & \text{sinon}
+			           \end{cases}
+		\end{align*}
+		\caption{Définition de la fonction $hold$}
+		\label{fig:sig-hold}
+	\end{figure}
+
+	La figure \ref{fig:sig-hold} présente la définition d'une fonction $hold$ exploitant ce mécanisme pour construire un signal enfant qui maintient sa valeur lorsque son parent devient indéfini.
+	
+	Il est ainsi important que les fonctions utilisées pour la définition de signaux ou pour leur transformation soient elles-mêmes semi-pure selon cette définition.
+	
+	Le concept d'\emph{observateur} (Section \ref{sec:sig-obs}) est un mécanisme permettant d'introduire des effets de bords dans un graphe de signaux de façon sûre et définie.
+	
+	\texttt{Signal} vérifie les trois axiomes des monades\cite{haskell-monad-laws}:
+	\begin{align*}
+		Signal(x) \text{ flatMap } f &\equiv f(x) \\
+		a \text{ flatMap } (x \mapsto Signal(x)) &\equiv a \\
+		(a \text{ flatMap } f)  \text{ flatMap } g &\equiv
+			a \text{ flatMap } (x \mapsto f(x)  \text{ flatMap } g) 
+	\end{align*}
+	Ils s'utilisent ainsi naturellement avec la compréhension \code{for .. yield} de Scala. Ici, l'opérateur $\equiv$ désigne une équivalence structurelle: les deux expressions sont substituables sans changer le comportement du programme.
+
 \section{Opérations}
-\section{Dépendances}
-\section{Observateurs}
-\section{État de l'art}
+	
+	\subsection{Construction}
+	
+		\begin{center}
+			\code{def apply[T](expr: => T): Signal[T]}
+			\code{def wrap[T](value: T): Constant[T]}
+			\code{def define[T](expr: => Option[T]): Signal[T]}
+		\end{center}
+
+	\subsection{Sélection (flatMap)}
+	
+		\begin{center}
+			\code{def flatMap[U](f: T=>Signal[U]): Signal[U]}
+		\end{center}
+	
+		La fonction \texttt{flatMap} est la fonction universelle de transformation des monades. Elle est suffisamment générale pour permettre de définir toutes les autres fonctions de transformation comme des cas particuliers de \texttt{flatMap}.
+		
+		Fondamentalement, \texttt{flatMap} implémente une opération de sélection: étant donné un signal \texttt{a} de type \texttt{Signal[T]} et une fonction \texttt{f: T => Signal[U]}, la fonction \texttt{f} est appliquée à la valeur actuelle du signal \texttt{a} afin d'obtenir un second signal \texttt{b} de type \texttt{Signal[U]} et retourne un troisième signal \texttt{c} également de type \texttt{Signal[U]} dont la valeur est en tout temps égale à celle du signal \texttt{b}.
+		
+		Si le signal \texttt{a} est indéfini, la fonction \texttt{f} n'est pas appliquée et le signal \texttt{c} est également considéré indéfini.
+		\begin{align*}
+			flatMap(a, f)
+				&\colon (Signal_{[T]}, T \to Signal_{[U]}) \to Signal_{[U]} \\
+				&\colon (\Gamma_a \to State_{[T]}, T \to \Gamma_f \to State_{[U]}) \to \Gamma_{a \times f} \to State_{[U]} \\
+				&= \gamma \mapsto \begin{cases}
+					f(v)(\gamma_f) & \text{si } a(\gamma_a) = Defined(v)\\
+					Undefined & \text{sinon}\\
+				\end{cases}
+		\end{align*}
+	
+	\subsection{Application (map)}
+	
+		\begin{center}
+			\code{def map[U](f: T=>U): Signal[U]}
+		\end{center}
+	
+		La fonction \texttt{map} effectue une opération de transformation sur la valeur d'un signal en appliquant la fonction \texttt{f} à la valeur courante du signal et retournant un nouveau signal représentant le résultat de cette transformation.
+		
+		Elle se définit comme une application particulière de \texttt{flatMap}:
+		\begin{align*}
+			map(a, f)
+				&\colon (Signal_{[T]}, T \to U) \to Signal_{[U]} \\
+				&\colon (\Gamma_a \to State_{[T]}, T \to U) \to \Gamma_a \to State_{[U]} \\
+				&= flatMap \big( a, v \mapsto \gamma \mapsto Defined(f(v)) \big)\\
+				&= \gamma \mapsto \begin{cases}
+					Defined \big(f (v) \big) & \text{si } a(\gamma) = Defined(v)\\
+					Undefined & \text{sinon}\\
+				\end{cases}
+		\end{align*}
+	
+	\subsection{Filtrage (filter)}
+	
+		\begin{center}
+			\code{def filter(p: T=>Boolean): Signal[T]}
+		\end{center}
+	
+		La fonction \texttt{filter} effectue une opération de filtrage d'un signal en appliquant un prédicat \texttt{p} à la valeur courante du signal et retournant un nouveau signal de même valeur si le prédicat est vérifié, ou un signal indéfini si le prédicat n'est pas vérifié.
+		
+		Elle se définit également comme une application particulière de \texttt{flatMap}:
+		\begin{align*}
+			filter(a, p)
+				&\colon (Signal_{[T]}, T \to Boolean) \to Signal_{[T]} \\
+				&\colon (\Gamma_a \to State_{[T]}, T \to Boolean) \to \Gamma_a \to State_{[T]} \\
+				&= flatMap \left( a, v \mapsto \gamma \mapsto \begin{cases}
+					a(\gamma) & \text{si } p(v)\\
+					Undefined & \text{sinon}\\
+				\end{cases} \right)\\
+				&= \gamma \mapsto \begin{cases}
+					a(\gamma) & \text{si } a(\gamma) = Defined(v) \text{ et } p(v)\\
+					Undefined & \text{sinon}\\
+				\end{cases}
+		\end{align*}
+		
+	\subsection{Lecture}
+	
+		\begin{center}
+			\code{def option: Option[T]}\\
+			\code{def value: T}\\
+		\end{center}
+	
+		Permet l'accès à la valeur actuelle d'un signal.
+		\[
+			a.option = \begin{cases}
+				Some(a.value) & \text{si } a \text{ est défini}\\
+				None & \text{si } a \text{ est indéfini}
+			\end{cases}
+		\]
+		\[
+			a.value = \left(opt \mapsto \begin{cases}
+				value & \text{si } opt \text{ est } Some(value)\\
+				Nothing & \text{si } opt \text{ est } None
+			\end{cases}\right) \circ a.option
+		\]
+
+\section{Hiérarchie}
+	
+	L'interface \code{Signal} est implémentée par une multitude de classes représentant les différents cas spécifiques pouvant former un signal. La figure \ref{fig:hierarchie-signaux} présente une vue d'ensemble de la hiérarchie ainsi formée. Les sections suivantes définissent ces variantes plus en détail.
+	
+	\begin{figure}
+		\begin{center}
+			\tikz \graph [layered layout, sibling distance=12mm, level distance=12mm, nodes={draw}]
+			{
+				Signal -- {Immutable, Mutable},
+				Immutable -- {Constant, Invalid, Undefined},
+				Mutable -- {Source, Lazy},
+				Lazy -- Expression
+			};
+		\end{center}
+		\caption{Hiérarchie des types de signaux définis}
+		\label{fig:hierarchie-signaux}
+	\end{figure}
+	
+	\subsection{Signal immutable}
+	
+	Un signal immutable est un signal dont la valeur ne change jamais. D'intérêt a priori limité, ils sont néanmoins utiles au niveau de la modélisation de certaines opérations et comme substituts à un \code{Signal} mutable.
+	
+	Trois classes de signaux immutables sont définies: \code{Constant[T]}, \code{Invalid} et \code{Undefined}. Elles sont des sous-types de l'interface commune \code{Immutable[T]} et offrent certaines opportunités d'optimisation du fait de leur invariance:
+	\begin{enumerate}
+		\item Les opérations sur signal immutable sont immédiates et retournent des signaux immutables. Les fonctions passées à ces opérations ne sont plus évaluées une fois le signal résultant construit et retourné.
+	
+		\item Il n'existe qu'une seule instance du signal immutable indéfini: l'objet \code{Undefined}. Celui-ci étend \code{Signal[Nothing]} et est par covariance substituable à n'importe quel type de signal.
+	\end{enumerate}
+	La figure \ref{fig:sig-imm-optim} illustre quelques exemples d'optimisations apportées par les signaux immutables.
+
+	\begin{figure}
+		\begin{lstlisting}
+val a: Immutable[Int] = Constant(2)
+val b: Immutable[Int] = Constant(2)
+
+val f: Int => Boolean = { x => false }
+
+val c: Immutable[Int] = a.filter(f) // f évalué ici
+val d: Immutable[Int] = b.filter(f)
+// aucun signal dynamique construit
+
+assert( c.isInstanceOf[Undefined.type] == true )
+assert( d.isInstanceOf[Undefined.type] == true )
+		\end{lstlisting}
+		\caption{Exemple d'optimisations apportées par les signaux immutables}
+		\label{fig:sig-imm-optim}
+	\end{figure}
+	
+	\subsection{Signal mutable et dépendances}
+	
+	Un signal mutable est un signal dont la valeur peut varier au cours du temps. Ils représentent la grande majorité des signaux manipulés dans un programme concret. Lorsque la valeur d'un signal mutable est \emph{fonction} d'autres signaux, il constitue alors un signal \emph{enfant} associé à un ensemble de signaux \emph{parents}. Cet ensemble peut varier dynamiquement en fonction de la valeur des ces signaux ou peut être nul.
+	
+	Ce concept de dépendances est à la base du mécanisme de propagation des changements entre signaux. Lorsque la valeur d'un signal change, l'ensemble des signaux qui en dépendent directement ou indirectement doivent être mis à jour.
+
+	\subsection{Signal source}
+	
+	Un signal \texttt{Source[T]} est un signal mutable, qui n'a pas de dépendance. C'est un conteneur dont la valeur peut être défini manuellement.
+	
+	\subsection{Signal paresseux}
+
+\section{Expression}
+
+\section{Propagation push-pull}
+
+\section{Observateurs} \label{sec:sig-obs}
+
+Les signaux sont défini comme des constructions fonctionnelles pures.
+
+\section{Comparaison avec les solutions existantes}
 \subsection{ReactiveX}
 
 \emph{ReactiveX} est une API pour la programmation asynchrone basée sur des flux observables. Un cas d'utilisation de l'API est par exemple les \texttt{Observable} disponibles dans le framework Angular~2.
