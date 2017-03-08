@@ -72,11 +72,33 @@
 		\label{fig:sig-hold}
 	\end{figure}
 
+	\begin{figure}
+		\begin{lstlisting}
+def hold[T](parent: Signal[T]): Signal[T] = {
+	var previous: Option[T] = None
+	Signal {
+		val state = parent.option
+		if (state.isDefined) previous = state
+		state orElse previous
+	}
+}
+		\end{lstlisting}
+		\caption{Implémentation de la fonction $hold$}
+		\label{fig:sig-hold-scala}
+	\end{figure}
+
 	La figure \ref{fig:sig-hold} présente la définition d'une fonction $hold$ exploitant ce mécanisme pour construire un signal enfant qui maintient sa valeur lorsque son parent devient indéfini.
 	
-	Il est ainsi important que les fonctions utilisées pour la définition de signaux ou pour leur transformation soient elles-mêmes semi-pure selon cette définition.
+	En pratique, le concept d'indice de génération est implicite. L'accès à un signal se fait toujours à partir de son état le plus récent et la disponibilité des états antérieurs est implémenté en utilisant des variables encapsulées dans le contexte de définition du signal. Les constructions ainsi formées ne sont donc pas strictement pures d'un point de vue fonctionnel mais sont compatible avec la notion théorique d'un signal et ne causent pas de surprise lors à l'usage. La figure \ref{fig:sig-hold-scala} présente une implémentation possible de la fonction $hold$ en Scala.
 	
-	Le concept d'\emph{observateur} (Section \ref{sec:sig-obs}) est un mécanisme permettant d'introduire des effets de bords dans un graphe de signaux de façon sûre et définie.
+	En résumé, les fonctions utilisées pour définir ou transformer un signal doivent être \emph{semi-pures}:
+	\begin{enumerate}
+		\item elles ne peuvent dépendre d'aucun état implicite, hormis d'autres signaux et leurs états antérieurs, et
+		\item ne doivent pas contenir d'effet de bords observables
+	\end{enumerate}
+	De cette façon, l'ordre d'évaluation des signaux ou même leur évaluation différée n'a pas d'importance dans le comportement du système. Ces propriétés ne sont pas vérifiables au niveau du langage, le développeur est ainsi responsable de s'assurer que ses fonctions soient conformes à ces contraintes.
+	
+	Le concept d'\emph{observateur} (Section \ref{sec:sig-obs}) est un mécanisme permettant d'introduire des effets de bords à partir de signaux, de façon sûre et définie.
 	
 	\texttt{Signal} vérifie les trois axiomes des monades\cite{haskell-monad-laws}:
 	\begin{align*}
@@ -87,9 +109,11 @@
 	\end{align*}
 	Ils s'utilisent ainsi naturellement avec la compréhension \code{for .. yield} de Scala. Ici, l'opérateur $\equiv$ désigne une équivalence structurelle: les deux expressions sont substituables sans changer le comportement du programme.
 
-\section{Opérations}
+\section{Opérations élémentaires}
 	
 	\subsection{Construction}
+	
+		Trois constructeurs sont définis pour former un signal.
 	
 		\begin{center}
 			\code{def apply[T](expr: => T): Signal[T]}
@@ -99,11 +123,11 @@
 
 	\subsection{Sélection (flatMap)}
 	
+		La fonction \texttt{flatMap} est la fonction universelle de transformation des monades. Elle est suffisamment générale pour permettre de définir toutes les autres fonctions de transformation comme des cas particuliers de \texttt{flatMap}.
+	
 		\begin{center}
 			\code{def flatMap[U](f: T=>Signal[U]): Signal[U]}
 		\end{center}
-	
-		La fonction \texttt{flatMap} est la fonction universelle de transformation des monades. Elle est suffisamment générale pour permettre de définir toutes les autres fonctions de transformation comme des cas particuliers de \texttt{flatMap}.
 		
 		Fondamentalement, \texttt{flatMap} implémente une opération de sélection: étant donné un signal \texttt{a} de type \texttt{Signal[T]} et une fonction \texttt{f: T => Signal[U]}, la fonction \texttt{f} est appliquée à la valeur actuelle du signal \texttt{a} afin d'obtenir un second signal \texttt{b} de type \texttt{Signal[U]} et retourne un troisième signal \texttt{c} également de type \texttt{Signal[U]} dont la valeur est en tout temps égale à celle du signal \texttt{b}.
 		
@@ -120,11 +144,11 @@
 	
 	\subsection{Application (map)}
 	
+		La fonction \texttt{map} effectue une opération de transformation sur la valeur d'un signal en appliquant la fonction \texttt{f} à la valeur courante du signal et retournant un nouveau signal représentant le résultat de cette transformation.
+		
 		\begin{center}
 			\code{def map[U](f: T=>U): Signal[U]}
 		\end{center}
-	
-		La fonction \texttt{map} effectue une opération de transformation sur la valeur d'un signal en appliquant la fonction \texttt{f} à la valeur courante du signal et retournant un nouveau signal représentant le résultat de cette transformation.
 		
 		Elle se définit comme une application particulière de \texttt{flatMap}:
 		\begin{align*}
@@ -140,11 +164,11 @@
 	
 	\subsection{Filtrage (filter)}
 	
+		La fonction \texttt{filter} effectue une opération de filtrage d'un signal en appliquant un prédicat \texttt{p} à la valeur courante du signal et retournant un nouveau signal de même valeur si le prédicat est vérifié, ou un signal indéfini si le prédicat n'est pas vérifié.
+	
 		\begin{center}
 			\code{def filter(p: T=>Boolean): Signal[T]}
 		\end{center}
-	
-		La fonction \texttt{filter} effectue une opération de filtrage d'un signal en appliquant un prédicat \texttt{p} à la valeur courante du signal et retournant un nouveau signal de même valeur si le prédicat est vérifié, ou un signal indéfini si le prédicat n'est pas vérifié.
 		
 		Elle se définit également comme une application particulière de \texttt{flatMap}:
 		\begin{align*}
@@ -182,66 +206,6 @@
 			\end{cases}\right) \circ a.option
 		\]
 
-\section{Hiérarchie}
-	
-	L'interface \code{Signal} est implémentée par une multitude de classes représentant les différents cas spécifiques pouvant former un signal. La figure \ref{fig:hierarchie-signaux} présente une vue d'ensemble de la hiérarchie ainsi formée. Les sections suivantes définissent ces variantes plus en détail.
-	
-	\begin{figure}
-		\begin{center}
-			\tikz \graph [layered layout, sibling distance=12mm, level distance=12mm, nodes={draw}]
-			{
-				Signal -- {Immutable, Mutable},
-				Immutable -- {Constant, Invalid, Undefined},
-				Mutable -- {Source, Lazy},
-				Lazy -- Expression
-			};
-		\end{center}
-		\caption{Hiérarchie des types de signaux définis}
-		\label{fig:hierarchie-signaux}
-	\end{figure}
-	
-	\subsection{Signal immutable}
-	
-	Un signal immutable est un signal dont la valeur ne change jamais. D'intérêt a priori limité, ils sont néanmoins utiles au niveau de la modélisation de certaines opérations et comme substituts à un \code{Signal} mutable.
-	
-	Trois classes de signaux immutables sont définies: \code{Constant[T]}, \code{Invalid} et \code{Undefined}. Elles sont des sous-types de l'interface commune \code{Immutable[T]} et offrent certaines opportunités d'optimisation du fait de leur invariance:
-	\begin{enumerate}
-		\item Les opérations sur signal immutable sont immédiates et retournent des signaux immutables. Les fonctions passées à ces opérations ne sont plus évaluées une fois le signal résultant construit et retourné.
-	
-		\item Il n'existe qu'une seule instance du signal immutable indéfini: l'objet \code{Undefined}. Celui-ci étend \code{Signal[Nothing]} et est par covariance substituable à n'importe quel type de signal.
-	\end{enumerate}
-	La figure \ref{fig:sig-imm-optim} illustre quelques exemples d'optimisations apportées par les signaux immutables.
-
-	\begin{figure}
-		\begin{lstlisting}
-val a: Immutable[Int] = Constant(2)
-val b: Immutable[Int] = Constant(2)
-
-val f: Int => Boolean = { x => false }
-
-val c: Immutable[Int] = a.filter(f) // f évalué ici
-val d: Immutable[Int] = b.filter(f)
-// aucun signal dynamique construit
-
-assert( c.isInstanceOf[Undefined.type] == true )
-assert( d.isInstanceOf[Undefined.type] == true )
-		\end{lstlisting}
-		\caption{Exemple d'optimisations apportées par les signaux immutables}
-		\label{fig:sig-imm-optim}
-	\end{figure}
-	
-	\subsection{Signal mutable et dépendances}
-	
-	Un signal mutable est un signal dont la valeur peut varier au cours du temps. Ils représentent la grande majorité des signaux manipulés dans un programme concret. Lorsque la valeur d'un signal mutable est \emph{fonction} d'autres signaux, il constitue alors un signal \emph{enfant} associé à un ensemble de signaux \emph{parents}. Cet ensemble peut varier dynamiquement en fonction de la valeur des ces signaux ou peut être nul.
-	
-	Ce concept de dépendances est à la base du mécanisme de propagation des changements entre signaux. Lorsque la valeur d'un signal change, l'ensemble des signaux qui en dépendent directement ou indirectement doivent être mis à jour.
-
-	\subsection{Signal source}
-	
-	Un signal \texttt{Source[T]} est un signal mutable, qui n'a pas de dépendance. C'est un conteneur dont la valeur peut être défini manuellement.
-	
-	\subsection{Signal paresseux}
-
 \section{Expression}
 
 \section{Propagation push-pull}
@@ -251,11 +215,10 @@ assert( d.isInstanceOf[Undefined.type] == true )
 Les signaux sont défini comme des constructions fonctionnelles pures.
 
 \section{Comparaison avec les solutions existantes}
+
 \subsection{ReactiveX}
 
-\emph{ReactiveX} est une API pour la programmation asynchrone basée sur des flux observables. Un cas d'utilisation de l'API est par exemple les \texttt{Observable} disponibles dans le framework Angular~2.
-
-Les Observables de ReactiveX sont cependant fondamentalement distincts du concept de signaux utilisés par Xuen.
+\emph{ReactiveX} est une API pour la programmation asynchrone basée sur des flux observables. Un cas d'utilisation de l'API est par exemple les \texttt{Observable} disponibles dans le framework Angular~2. Cependant, les \texttt{Observables} de ReactiveX sont cependant fondamentalement distincts du concept de signaux.
 
 \subsection{Reactive-Web}
 \subsection{Scala.rx}
