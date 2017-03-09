@@ -94,7 +94,7 @@ def hold[T](parent: Signal[T]): Signal[T] = {
 	En résumé, les fonctions utilisées pour définir ou transformer un signal doivent être \emph{semi-pures}:
 	\begin{enumerate}
 		\item elles ne peuvent dépendre d'aucun état implicite, hormis d'autres signaux et leurs états antérieurs, et
-		\item ne doivent pas contenir d'effet de bords observables
+		\item elles ne doivent pas contenir d'effets de bords observables
 	\end{enumerate}
 	De cette façon, l'ordre d'évaluation des signaux ou même leur évaluation différée n'a pas d'importance dans le comportement du système. Ces propriétés ne sont pas vérifiables au niveau du langage, le développeur est ainsi responsable de s'assurer que ses fonctions soient conformes à ces contraintes.
 	
@@ -208,17 +208,81 @@ def hold[T](parent: Signal[T]): Signal[T] = {
 
 \section{Expression}
 
+	Une méthode alternative de définition des signaux sont les expressions. L'objectif ici est d'utiliser les mécanismes du langage Scala pour permettre une détection automatique des dépendances entres signaux.
+	\begin{lstlisting}
+val e = Signal {
+	if (c.value > 5) a.value + b.value
+	else a.value + d.value
+}
+	\end{lstlisting}
+	Dans cet exemple, le signal \texttt{e} est déclaré comme la somme des signaux \texttt{a} et \texttt{b} si la valeur du signal \texttt{c} est supérieur à 5, ou comme la somme de \texttt{a} et \texttt{d} dans le cas contraire. Il n'est pas nécessaire de déclarer explicitement ces dépendances ou d'utiliser les opérations monadiques pour combiner ces différents signaux. L'accès à l'état d'un autre signal à l'intérieur de l'expression de définition est suffisant pour détecter la dépendance entre les deux signaux et assurer la propagation des changements.
+	
+	Cette approche est un outil très efficace pour combiner de façon complexe de multiples signaux. Seuls les signaux réellement utilisés lors du calcul de la valeur courante du signal sont utilisés comme dépendances. Par exemple, le signal \texttt{d} ne sera pas une dépendance de \texttt{e} si \texttt{c} est supérieur à 5. De cette façon, le signal ne dépend que des informations qu'il a réellement utilisé pour générer son état et n'est pas recalculé inutilement.
+	
+	L'accès à la valeur d'un signal indéfini dans une expression de définition provoque le lancement d'une exception particulière qui interrompt le calcul de la valeur du signal et indique à l'implémentation que l'état du signal enfant doit également être indéfini. Il n'est donc pas nécessaire de vérifier systématiquement que la valeur du signal soit définie. Le code est ainsi écrit de façon optimiste, laissant à l'implémentation des signaux le soin de gérer le cas non-défini.
+
 \section{Propagation push-pull}
+
+	Deux modes de fonctionnement sont généralement décrit pour des systèmes fonctionnels-réactifs: \emph{push} et \emph{pull}.
+	
+	L'approche \emph{push} se base sur les changements apportés aux signaux sources pour recalculer tous les signaux enfants qui en dépendent. Dans l'approche \emph{pull}, c'est l'accès aux signaux enfants qui provoque le calcul des valeurs intermédiaires jusqu'aux signaux sources. Dans les deux cas, des opérations potentiellement inutiles ou redondantes sont effectuées.
+	
+	L'approche mixte \emph{push-pull} se base sur une approche principalement \emph{pull} où l'accès à l'état d'un signal déclenche son évaluation, auquel vient s'ajouter un mécanisme de \emph{mémoïsation} qui maintient l'état courant du signal après son calcul. L'invalidation de ces caches se fait ensuite selon une approche \emph{push}: un changement d'état des signaux sources est notifié à toutes les dépendance.
 
 \section{Observateurs} \label{sec:sig-obs}
 
-Les signaux sont défini comme des constructions fonctionnelles pures.
+	Un observateur permet d'ajouter des effets de bords aux changements d'états d'un signal.
 
 \section{Comparaison avec les solutions existantes}
 
-\subsection{ReactiveX}
+	\subsection{ReactiveX}
+	
+	\emph{ReactiveX} est une \og API pour la programmation asynchrone basée sur des flux observables \fg. Un cas d'utilisation de l'API sont par exemple le concept d'\texttt{Observable} disponible dans le framework Angular~2. Cependant, les flux d'événements de ReactiveX sont fondamentalement différents du concept de signaux: un signal est une valeur qui varie avec le temps tandis qu'un observable est une source d'événements discrets et sans rémanence.
+	
+	Dans le cas des signaux, le style de programmation encouragé est un style fonctionnel et déclaratif: le développeur exprime \emph{comment} de multiples valeurs doivent être assemblées pour former le résultat attendu, sans se soucier du timing des opérations puisque l'ensemble est considéré comme un système pseudo-continu.
+	
+	Les observable en revanche mettent au premier plan la séquence d'événements générés et par extension la gestion du temps. Le système est approché comme une série d'événements discrets plutôt que comme une valeur continue.
+	
+	
+		
+	\subsection{Reactive-Web}
+	
+	TODO
+	
+	\subsection{Scala.rx}
+	
+	Scala.rx est l'implémentation la plus proche des signaux utilisés dans ce projet. La simplicité d'utilisation est particulièrement appréciable avec la méthode de définition de \texttt{Rx}s sur la base d'expressions arbitraires.
+	
+	Les différences sont principalement liées aux limitations volontairement imposées dans Scala.rx.
+	
+	\subsubsection{Pas de variable réactive non-définie / vide}
+	
+	La raison invoquée est la difficulté d'intégrer l'absence de valeur de façon intuitive dans la syntaxe déclarative. Plus spécifiquement, l'auteur mentionne plusieurs solutions potentiels:
+	\begin{enumerate}
+		\item Bloquer le thread courant jusqu'à ce qu'une valeur soit disponible. Cette solution n'est cependant pas envisageable pour une implémentation visant l'environnement Javascript.
+		\item Lancer une exception lors de l'accès à une variable vide, mais recommencer l'opération une fois que sa valeur sera définie. Cette option présente le désavantages que le calcul d'une variable réactive puisse potentiellement être démarré puis interrompu de multiples fois si de nombreuses dépendances sont indéfinies.
+		\item Obliger le style monadique et retirer la méthode implicite de définition. Cette option n'est pas considérée pour des raisons d'expérience utilisateur évidentes.
+		\item Utiliser un plugin du compilateur pour transformer automatiquement le code en style monadique. Cette approche présente cependant de nombreux défis techniques et requiert une étape supplémentaire de configuration indésirable.
+	\end{enumerate}
 
-\emph{ReactiveX} est une API pour la programmation asynchrone basée sur des flux observables. Un cas d'utilisation de l'API est par exemple les \texttt{Observable} disponibles dans le framework Angular~2. Cependant, les \texttt{Observables} de ReactiveX sont cependant fondamentalement distincts du concept de signaux.
-
-\subsection{Reactive-Web}
-\subsection{Scala.rx}
+	En pratique l'absence de variable réactive vide est une gêne considérable dans le domaine du web où toutes les opérations sont asynchrones et non-bloquante. Le concept de promesse est omni-présent et il est ainsi difficile d'associer les interfaces natives du navigateur avec le réseau de variables réactives.
+	
+	Une première approche est d'utiliser directement le type \texttt{Option} de Scala pour exprimer l'absence d'information le temps de l'opération. Mais cette idée impose une verbosité beaucoup plus importante du code puisqu'il est maintenant nécessaire de manipuler explicitement des \texttt{Rx[Option[T]]} au lieu de simples \texttt{Rx[T]} et de laisser le soin de la gestion de l'asynchrone à la bibliothèque.
+	
+	De plus, la seconde approche proposée (interrompre le calcul par une exception) ne semble pas déraisonnable et peut constituer une approche valide si correctement documentée. Il est important que les conséquences d'une variable indéfinie soient connues et considérées, mais leur absence volontaire semble au final plus gênante que bénéfique. Par ailleurs, le style monadique ne présente pas les inconvénients mentionnés et constitue une alternative valide si le style est plus adapté à un problème spécifique.
+	
+	\subsubsection{Complexité d'implémentation}
+	
+	Malgré l'effort fourni pour proposer une interface simple et efficace, l'implémentation est en réalité relativement complexe et très largement basée sur l'utilisation de macros. Le code écrit par le développeur n'est pas le code finalement exécuté. Une raison probable de cette implémentation est basée sur la méthode choisie pour détecter automatiquement les dépendances entre variables réactives avec le style déclaratif.
+	
+	Dans Scala.rx, les expressions qui définissent des variables réactives sont réécrite sous formes de fonctions exploitant largement le système de paramètres implicites pour transmettre le contexte d'accès à une variable réactive entre parent et enfant. Bien que cela soit une approche très proche des standards en Scala, elle requiert une couche syntaxique supplémentaire ou l'utilisation de macros afin de l'ajouter automatiquement. Le système résultant est excessivement complexe et les erreurs rencontrées lors de l'usage ne sont pas intuitives puisqu'elles ne correspondent pas au code écrit. 
+	
+	De plus, l'approche n'est pas portable entre les versions de Scala puisqu'elle dépend de l'implémentation interne du compilateur. Dans le cas de Scala.rx, l'implémentation est compilée simultanément pour les version 2.10, 2.11 et 2.12 de Scala et requiert pour chaque version une implémentation différente des macros pour s'aligner avec les changements apportés au compilateur et à la syntaxe du langage.
+	
+	Une approche alternative est possible: \texttt{DynamicVariable}. Cette classe de la bibliothèque standard de Scala est rarement utilisée puisque très spécifique et généralement moins explicite que l'usage de paramètres implicites qui sont plus en accord avec les principes de la programmation fonctionnelle. Elle rempli cependant un rôle semblable en offrant une sémantique de variable à portée dynamique plutôt que lexicale. Ce mécanisme permet de déplacer la transmission du contexte d'évaluation des paramètres implicites à un canal annexe dédié.
+	
+	Le code est ainsi fortement simplifié puisque la transmission du contexte est clairement dissociée, évitant la nécessité de modifier le code utilisateur et donc l'usage de macros au prix d'une architecture pouvant être considérée moins pure d'un point de vue fonctionnel. L'absence de macros permet également une compatibilité plus aisée avec les futures versions du langage.
+	
+	\subsubsection{Évaluation stricte}
+	
+	TODO
