@@ -1,0 +1,80 @@
+\chapter{Haut-niveau}
+
+\section{Signal}
+
+\subsection{Définition}
+
+Un signal de type \texttt{Signal[T]} est l'unité élémentaire d'un système réactif-fonctionnel. C'est un conteneur pour une valeur de type \texttt{T} dont la valeur peut changer au cours du temps, il peut également être \emph{indéfini} et n'est alors associé à aucune valeur au moment présent.
+
+Un signal peut également posséder un nombre quelconque de signaux \emph{parents}, nécessaires à la définition de sa propre valeur. Il peut également être composés à d'autre signaux et transformés par l'application de fonctions afin de produire de nouveaux signaux dérivés.
+
+L'arbre de signaux ainsi construit représente alors un ensemble de transformations fonctionnelles appliquées de façon continue sur les valeurs des signaux sources situés à la racine et permettant d'en dériver les valeurs des signaux feuilles, correspondant aux valeurs utiles à l'application réalisée.
+
+\subsection{Opérations monadiques}
+
+\subsubsection{\texttt{map}}
+\subsubsection{\texttt{flatMap}}
+\subsubsection{\texttt{filter}}
+\subsubsection{\texttt{fold}}
+
+\subsection{Expression}
+
+Signaux expression
+
+\subsection{Comparaison avec les \texttt{Rx} de \emph{ReactiveX}}
+
+Dans les implémentations les plus populaires de framework réactifs-fonctionnels, dont notamment la bibliothèque \emph{ReactiveX} disponible pour de nombreux langages, on retrouve généralement un concept similaire sous le nom de \texttt{Rx}.
+
+Bien que tous deux soient une abstraction du temps, les \texttt{Rx} représentent fondamentalement une séquence tandis qu'un \texttt{Signal} est une valeur unique à un instant donné. Afin de clarifier cette distinction, ces deux interfaces peuvent être comparées à leur équivalent non-réactif le plus proche dans la bibliothèque standard de Scala:
+
+\begin{table}[H]
+	\begin{tabular}{@{}p{2.5cm}p{2.5cm}p{\dimexpr\textwidth-6cm\relax}@{}}
+		\toprule
+		Type de base & Type réactif & Différence \\ \midrule
+		\texttt{Stream[T]} & \texttt{Rx[T]} & Tous les éléments d'un \texttt{Stream} sont calculables à l'instant présent, les éléments d'une \texttt{Rx} ne sont peut être pas encore disponibles \\
+		&  & \\
+		\texttt{Future[T]} & \texttt{Signal[T]} & Un \texttt{Future} n'est résolu qu'une seule fois, un \texttt{Signal[T]} peut changer de valeur de multiples fois au cours du temps \\ \bottomrule
+	\end{tabular}
+\end{table}
+
+Ainsi, certaines opérations monadique dont la sémantique peut être ambiguë dans le cas des valeurs réactives peuvent avoir des comportements considérablement différents entre ces deux concepts. C'est le cas notamment de la fonction \texttt{flatMap}
+\footnote{\texttt{Signal[T].flatMap[U](fn: T => U): Signal[U]}, de façon similaire pour \texttt{Rx[T]}}:
+
+\begin{itemize}
+	\item Sur une valeur \texttt{Rx}, l'opération \texttt{flatMap} effectue une concaténation des valeurs des sous-séquences retournées, potentiellement entrelacées.
+	\item Sur un \texttt{Signal}, l'opération \texttt{flatMap} se comporte comme un switch: le signal original est utilisé pour sélectionner un second signal, dont la valeur sera celle du signal produit par \texttt{flatMap}. Lorsque la valeur du signal initial change, la sélection est effectuée à nouveau et le signal résultant est utilisé comme nouvelle source de valeurs.
+\end{itemize}
+
+Bien que la bibliothèque \emph{ReactiveX} propose un opérateur spécifique avec la sémantique de switch, il est utile de préciser que l'opération \texttt{flatMap} est l'opération utilisée par le langage Scala lors de l'utilisation de multiples générateurs dans une compréhension \texttt{for}.
+
+Ainsi le code
+\begin{lstlisting}
+val a: Signal[Int] = ...
+val b: Array[Signal[Double]] = ...
+val c: Signal[Double] = for (x <- a; y <- b(x)) yield y * 2
+\end{lstlisting}
+
+sera transformé par le compilateur en
+\begin{lstlisting}
+val c = a.flatMap(x => b(x)).map(y * 2)
+\end{lstlisting}
+
+et produira des résultats radicalement différents selon l'abstraction utilisée:
+
+\begin{itemize}
+	\item Dans le cas des \texttt{Rx}, le résultat est l'agglomération des tous les flux de valeurs de \texttt{b} sélectionnés au fil du temps, potentiellement de multiples fois. Le résultat n'est très probablement pas celui escompté.
+	
+	\item Dans le cas de \texttt{Signal}, le résultat est un signal \texttt{c} dont la valeur est le double de celle d'un signal contenu dans le tableau \texttt{b} et désigné par la valeur du signal \texttt{a}, le tout sur la base des valeurs de ces signaux au moment présent. Dans le future, lorsque la valeur de \texttt{a} ou de \texttt{b(x)} changera, la valeur de \texttt{c} sera également mise à jour.
+\end{itemize}
+
+La sémantique des signaux, basée sur les valeurs plutôt que la séquences de ces valeurs, a pour but d'être la plus adaptée possible à l'usage qui en est fait dans ce travail, c'est à dire la conception d'interfaces graphique. Dans cette optique, la sémantique associée à la compréhension \texttt{for} par les signaux semble plus adaptées que la sémantique non-déterministe des \texttt{Rx}.
+
+Une conséquence supplémentaire de cette différence entre signaux et \texttt{Rx} est la possibilité de définir aisément le concept de \emph{signal expression} dans le cas des signaux. Dans le cas des \texttt{Rx}, le comportement attendu d'une telle construction n'est pas évident dans une situation où les flux sont potentiellement finis. \textit{A PRECISER}
+
+\section{Comparaisons}
+\section{MonadicHTML}
+
+\section{Framework reactif}
+
+\section{Construction de composants web}
+\subsection{Intégration RX et templates}

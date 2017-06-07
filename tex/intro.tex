@@ -2,3 +2,20 @@
 
 \section{Programmation réactive-fonctionnelle}
 \section{Objectifs}
+
+\section{Technologies utilisées}
+
+\begin{enumerate}
+	\item \textbf{Web Components}: un ensemble d'APIs de la plateforme web destiné à permettre de construire simplement des composants réutilisables et portables grâce au support natif de la technologie dans les navigateurs web modernes. \textit{Web Components} est le regroupement de quatre spécifications plus ciblées:
+	\begin{itemize}
+		\item \textbf{Custom Elements}: cette première spécification défini une API pour la définition de nouveau élément DOM. En pratique, cela se traduit par la capacité à créer de nouvelle balise HTML reconnue par le navigateur et d'y associer des comportements spécifiques. Il est également possible d'étendre une balise existante selon une forme d'héritage, mais cette fonctionnalité n'est pas exploitée dans ce travail
+		
+		\item \textbf{Shadow DOM}: défini un mécanisme permettant d'encapsuler un sous-arbre DOM et des styles CSS associés afin de les rendre invisibles de l'extérieur de l'élément hôte. Ce système est largement utilisé pour réaliser l'implémentation interne des éléments personnalisés et limiter ainsi les risques de conflits avec les autres éléments présents dans le document. De plus, les styles CSS placés dans un sous-arbre caché ne peuvent affecter que les éléments de ce sous-arbre, limitant ainsi leur portée.
+		
+		\item \textbf{HTML Imports}: défini un mécanisme permettant d'importer un document HTML dans un autre document. Dans le cadre de ce travail, cette technologie ne sera pas utilisée. Les composants sont en effet définis entièrement en \textit{Scala.js} et sont donc distribués avec le fichier script compilé de l'application et non dans des documents HTML séparés.
+		
+		\item \textbf{HTML Template}: défini l'élément HTML \code{<template>} permettant la définition de fragment de document inactifs\footnote{Les images contenues dans ce fragment de document ne sont pas chargées, les scripts ne sont pas exécutés, etc.} qui pourront être instanciés dynamiquement par un script à l'exécution.
+	\end{itemize}
+
+	\item \textbf{Scala.js}: ...
+\end{enumerate}
