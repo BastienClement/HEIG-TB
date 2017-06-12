@@ -2,6 +2,18 @@
 
 \section{Signal}
 
+\subsection{Motivations}
+
+La construction d'interfaces utilisateur met en évidence la problématique de la gestion des interactions et du maintient de la cohérence des informations présentées. En effet, les actions effectuées par l'utilisateur modifient l'état du logiciel et requièrent alors une actualisation de l'affichage. Lorsque l'interface devient complexe, maintenir une cohérence globale présente une difficulté de plus en plus importante. Le problème est exacerbé lorsque les modifications de l'état ne proviennent pas uniquement de l'utilisateur mais peuvent également survenir par l'action de processus asynchrones tel qu'une tâche de fond ou une connexion réseau.
+
+La séparation classique Modèle-Vue-Contrôleur repose généralement la notion d'\emph{Observable} et d'\emph{Observateur} pour lier Vue et Modèle. Ce concept présente cependant de multiples inconvénients tel que la promotion d'effets de bord, une diminution de l'encapsulation, une verbosité excessive; le rendant ainsi fastidieux à l'utilisation et sujet à erreurs\cite{odersky2012}.
+
+Ingo Maier et Martin Odersky proposent ainsi une approche plus fonctionnelle et composable avec la bibliothèque \emph{Scala.React}\cite{scala-react} avec entre autres la notion de signal: une valeur pouvant varier avec le temps. Cependant les signaux ne sont qu'un des multiples outils mis à disposition et l'utilisation de la bibliothèque se révèle être excessivement complexe, même dans les cas les plus simples\cite[\small Related~Work]{scala.rx}.
+
+Partant de ce constat, Li Haoyi a ainsi développé \emph{Scala.Rx}\cite{scala.rx}: une réimplémentation simplifiée du concept de signaux avec une emphase sur la simplicité, à la fois au niveau de la conception que de l'utilisation. Cependant, par simplicité, plusieurs limitations ont été volontairement imposées et se révèlent être particulièrement gênantes dans le cadre de ce projet.
+
+Xuen implémente ainsi un concept de signaux largement basés sur ceux de \emph{Scala.Rx}, mais dont les fonctionnalités ont été spécifiquement adaptées à leurs utilisation dans le cadre du développement d'interfaces utilisateur.
+
 \subsection{Définition}
 
 Un signal de type \texttt{Signal[T]} est l'unité élémentaire d'un système réactif-fonctionnel. C'est un conteneur pour une valeur de type \texttt{T} dont la valeur peut changer au cours du temps, il peut également être \emph{indéfini} et n'est alors associé à aucune valeur au moment présent.
@@ -10,69 +22,146 @@ Un signal peut également posséder un nombre quelconque de signaux \emph{parent
 
 L'arbre de signaux ainsi construit représente alors un ensemble de transformations fonctionnelles appliquées de façon continue sur les valeurs des signaux sources situés à la racine et permettant d'en dériver les valeurs des signaux feuilles, correspondant aux valeurs utiles à l'application réalisée.
 
-\subsection{Opérations monadiques}
+\subsection{Accès}
 
-\subsubsection{\texttt{map}}
-\subsubsection{\texttt{flatMap}}
-\subsubsection{\texttt{filter}}
-\subsubsection{\texttt{fold}}
+L'interface d'un signal \texttt{Signal[T]} défini deux méthodes pour accéder à sa valeur courante:
+\begin{enumerate}
+	\item \textbf{\texttt{Signal.option}}: retourne la valeur courante d'un signal sous la forme d'une \texttt{Option[T]}. C'est une façon sûre d'accéder à l'état du signal quel qu'il soit.
+	
+	\item \textbf{\texttt{Signal.value}}: retourne la valeur courante du signal (donc une valeur de type \texttt{T}) s'il est défini ou lance une exception\footnote{De type \texttt{UndefinedSignalException}} s'il ne l'est pas. De façon générale, cette méthode est plutôt destinée à être utilisée dans le cadre de la définition de signaux expression (section \ref{sec:sig-expr}) puisque dans ce cas, l'exception est traitée par le constructeur et entraîne la construction d'un signal vide.
+\end{enumerate}
+
+\subsection{Construction}
+
+Les signaux sont généralement créés par transformation des signaux existants. Cependant, dans le cas où un signal racine doit être construit, quatre méthodes sont disponibles, donc les 3 premières sont des fonctions de l'objet \texttt{Signal}:
+
+\begin{center}
+	\code{def Signal.apply[T](expr: => T): Signal[T]}
+	\code{def Signal.define[T](expr: => Option[T]): Signal[T]}
+	\code{def Signal.wrap[T](value: T): Constant[T]}
+\end{center}
+
+Les deux premières méthodes, \texttt{apply} et \texttt{define} sont les constructeurs de signaux expressions dont la sémantique est plus précisément décrite en section \ref{sec:sig-expr}. L'expression sera évaluée pour déterminer la valeur du signal et les dépendances vers d'autres signaux seront automatiquement identifiées.
+
+La troisième méthode, \texttt{wrap}, permet l'utilisation d'une valeur non-signal de type \texttt{T} à la place d'une valeur signal de type \texttt{Signal[T]}. Le type de retour \texttt{Constant[T]} est un sous-type de \texttt{Signal[T]}. La section \ref{sec:sig-hierarchy} présente plus en détail la hiérarchie des signaux.
+
+\subsubsection{Sources}
+
+Une quatrième méthode de construction des signal consiste en l'utilisation d'une \texttt{Source[T]}, un sous-type de \texttt{Signal[T]}. Deux constructeurs sont disponible selon que l'état initial désiré soit \emph{défini} ou \emph{indéfini}.
+
+\begin{center}
+	\code{def Source.apply[T](value: T): Source[T]}
+	\code{def Source.undefined[T]: Signal[T]}
+\end{center}
+
+Une instance de \texttt{Source[T]} offre une méthode de mutation
+\begin{center}
+	\code{def := (value: T): Unit}
+\end{center}
+permettant d'impérativement mettre à jour la valeur contenue dans la source. Cette opération est traitée comme un changement d'état de la source et provoquera l'invalidation récursive des tous les signaux dépendant de cette source.
+
+Une source est destinée à être utilisées lors de la construction de système hybrides, combinant code impératif basé sur les effets de bords et code fonctionnel. La source est alors un point d'entrée dans le graphe de dépendances des signaux pour la partie de code impérative.
+
+\subsection{Transformations monadiques}
+
+Une première interface de transformation des signaux\footnote{L'autre interface étant l'utilisation des signaux expressions, décrits en section \ref{sec:sig-expr}} est l'ensemble des opérations monadiques bien connues en programmation fonctionnelle. Chacune de ces opérations s'applique sur une instance de \texttt{Signal} et retourne un nouveau signal selon une sémantique propre à l'opération.
+
+Dans les exemples ci-dessous, les opérations sont supposées appliquées à une instance de type \texttt{Signal[T]}, \texttt{T} faisant ainsi référence au type d'élément contenu dans le signal original. Seuls les opérateurs les plus courants et ceux utilisés par le compilateur Scala lors de la compilation d'une compréhension \emph{for} sont traités ici, la Scaladoc du projet contient une liste exhaustive des opérations disponibles sur les instances de \texttt{Signal[T]}.
+
+\subsubsection{Opérateur de transformation (\texttt{map})}
+
+\begin{center}
+	\code{def map[U](f: T=>U): Signal[U]}
+\end{center}
+
+La fonction \texttt{map} effectue une opération de transformation sur la valeur d'un signal en appliquant la fonction \texttt{f} à la valeur courante du signal et retournant un nouveau signal contenant en tout temps le résultat de cette transformation.
+
+\textit{EXEMPLE: ???}
+
+\subsubsection{Opérateur de sélection (\texttt{flatMap})}
+	
+\begin{center}
+	\code{def flatMap[U](f: T=>Signal[U]): Signal[U]}
+\end{center}
+
+Dans le cas des signaux, \texttt{flatMap} implémente une opération de sélection: étant donné un signal \texttt{a} de type \texttt{Signal[T]} et une transformation sous la forme d'une fonction \texttt{f: T => Signal[U]}, la fonction \texttt{f} est appliquée à la valeur actuelle du signal \texttt{a} afin d'obtenir un second signal \texttt{b} de type \texttt{Signal[U]} et retourne un troisième signal \texttt{c} également de type \texttt{Signal[U]} dont la valeur est en tout temps égale à celle du signal \texttt{b}. La fonction \texttt{f} est réévaluée à chaque changement d'état du signal \texttt{a} afin de définir un nouveau signal de référence \texttt{b}.
+
+Si le signal \texttt{a} est indéfini, la fonction \texttt{f} n'est pas appliquée et le signal \texttt{c} est également considéré indéfini.
+
+La fonction \texttt{flatMap}\footnote{\emph{bind} en Haskell, ou \texttt{>>=}} est la fonction universelle de transformation des monades. Elle est suffisamment générale pour permettre de définir toutes les autres fonctions de transformation comme des cas particuliers de \texttt{flatMap}. Par exemple, la transformation \texttt{a.map(f)} peut également s'écrire  sous la forme \texttt{a.flatMap(value => Constant(f(value))}.
+
+\textit{EXEMPLE: ???}
+
+\subsubsection{Opérateur de filtrage (\texttt{filter})}
+
+\begin{center}
+	\code{def filter(p: T=>Boolean): Signal[T]}
+\end{center}
+
+La fonction \texttt{filter} effectue une opération de filtrage d'un signal en appliquant un prédicat \texttt{p} à la valeur courante du signal et retournant un nouveau signal de même valeur si le prédicat est vérifié, ou un signal indéfini si le prédicat n'est pas vérifié.
+
+\textit{EXEMPLE: ???}
+
+\subsubsection{Opérateur de combinaison (\texttt{fold})}
+
+\begin{center}
+	\code{def fold[U](a: U)(f: (U, T)=>U): Signal[U]}
+\end{center}
+
+L'opérateur \texttt{fold} possède la particularité d'introduire un effet de \emph{mémoire} aux signaux. Il prend en paramètre un \emph{état initial} \texttt{a} de type \texttt{U} et une fonction de combinaison \texttt{f: (U, T) => U} permettant d'associer la valeur courante du signal à cet état pour produire un \emph{état courant}, également de type \texttt{U}, qui sera contenu dans le signal produit par l'opérateur.
+
+Lors d'un changement d'état du signal initial, l'\emph{état antérieur} est combiné à la nouvelle valeur du signal pour former le nouvel \emph{état courant}. Si le signal est indéfini la fonction \texttt{f} n'est pas évaluée et l'\emph{état antérieur} devient l'\emph{état courant} sans modification. Dans le cas où le signal est initialement indéfini, l'\emph{état initial} devient l'\emph{état courant} tel quel.
+
+\textit{EXEMPLE: HOLD VALUE}
 
 \subsection{Expression}
+\label{sec:sig-expr}
 
-Signaux expression
+Un signaux expression est un signal dont la définition est une expression arbitraire. Un tel signal détermine automatiquement ses signaux parents en observant les signaux accédés lors de l'évaluation de l'expression et construit ainsi automatiquement son arbre de dépendances. Si l'un de ces signaux venait à changer, la valeur du signal expression serait recalculée.
 
-\subsection{Comparaison avec les \texttt{Rx} de \emph{ReactiveX}}
+Un signal expression est simplement construit en passant l'expression de définition au constructeur \texttt{Signal} tel qu'illustré par la figure \ref{fig:signal-expr-init}.
 
-Dans les implémentations les plus populaires de framework réactifs-fonctionnels, dont notamment la bibliothèque \emph{ReactiveX} disponible pour de nombreux langages, on retrouve généralement un concept similaire sous le nom de \texttt{Rx}.
-
-Bien que tous deux soient une abstraction du temps, les \texttt{Rx} représentent fondamentalement une séquence tandis qu'un \texttt{Signal} est une valeur unique à un instant donné. Afin de clarifier cette distinction, ces deux interfaces peuvent être comparées à leur équivalent non-réactif le plus proche dans la bibliothèque standard de Scala:
-
-\begin{table}[H]
-	\begin{tabular}{@{}p{2.5cm}p{2.5cm}p{\dimexpr\textwidth-6cm\relax}@{}}
-		\toprule
-		Type de base & Type réactif & Différence \\ \midrule
-		\texttt{Stream[T]} & \texttt{Rx[T]} & Tous les éléments d'un \texttt{Stream} sont calculables à l'instant présent, les éléments d'une \texttt{Rx} ne sont peut être pas encore disponibles \\
-		&  & \\
-		\texttt{Future[T]} & \texttt{Signal[T]} & Un \texttt{Future} n'est résolu qu'une seule fois, un \texttt{Signal[T]} peut changer de valeur de multiples fois au cours du temps \\ \bottomrule
-	\end{tabular}
-\end{table}
-
-Ainsi, certaines opérations monadique dont la sémantique peut être ambiguë dans le cas des valeurs réactives peuvent avoir des comportements considérablement différents entre ces deux concepts. C'est le cas notamment de la fonction \texttt{flatMap}
-\footnote{\texttt{Signal[T].flatMap[U](fn: T => U): Signal[U]}, de façon similaire pour \texttt{Rx[T]}}:
-
-\begin{itemize}
-	\item Sur une valeur \texttt{Rx}, l'opération \texttt{flatMap} effectue une concaténation des valeurs des sous-séquences retournées, potentiellement entrelacées.
-	\item Sur un \texttt{Signal}, l'opération \texttt{flatMap} se comporte comme un switch: le signal original est utilisé pour sélectionner un second signal, dont la valeur sera celle du signal produit par \texttt{flatMap}. Lorsque la valeur du signal initial change, la sélection est effectuée à nouveau et le signal résultant est utilisé comme nouvelle source de valeurs.
-\end{itemize}
-
-Bien que la bibliothèque \emph{ReactiveX} propose un opérateur spécifique avec la sémantique de switch, il est utile de préciser que l'opération \texttt{flatMap} est l'opération utilisée par le langage Scala lors de l'utilisation de multiples générateurs dans une compréhension \texttt{for}.
-
-Ainsi le code
-\begin{lstlisting}
+\begin{figure}[!h]
+	\begin{lstlisting}
 val a: Signal[Int] = ...
-val b: Array[Signal[Double]] = ...
-val c: Signal[Double] = for (x <- a; y <- b(x)) yield y * 2
-\end{lstlisting}
+val b: Signal[Int] = ...
+val c: Signal[Int] = Signal {
+	a.value + b.value
+}
+	\end{lstlisting}
+	\caption{Déclaration d'un signal expression}
+	\label{fig:signal-expr-init}
+\end{figure}
 
-sera transformé par le compilateur en
-\begin{lstlisting}
-val c = a.flatMap(x => b(x)).map(y * 2)
-\end{lstlisting}
+Les parents d'un signal expression sont dynamiques, à chaque évaluation, la liste des parents est vidée puis reconstruite selon l'évaluation actuelle. De cette façon, les dépendances sont toujours le plus précises possible et les invalidation inutiles sont évitées. Ceci est particulièrement important dans le cas de signaux contenant des branches et donc des dépendances effectivement dépendantes de la valeur de certains signaux.
 
-et produira des résultats radicalement différents selon l'abstraction utilisée:
+Dans l'exemple de la figure \ref{fig:signal-expr-branches}, le signal construit ne dépend de \texttt{b} que si la valeur du signal \texttt{a} est \texttt{false}. Dans le cas contraire, il est dépendant de \texttt{c}. Dans tous les cas, une dépendance est créée vers le signal \texttt{a}.
 
-\begin{itemize}
-	\item Dans le cas des \texttt{Rx}, le résultat est l'agglomération des tous les flux de valeurs de \texttt{b} sélectionnés au fil du temps, potentiellement de multiples fois. Le résultat n'est très probablement pas celui escompté.
-	
-	\item Dans le cas de \texttt{Signal}, le résultat est un signal \texttt{c} dont la valeur est le double de celle d'un signal contenu dans le tableau \texttt{b} et désigné par la valeur du signal \texttt{a}, le tout sur la base des valeurs de ces signaux au moment présent. Dans le future, lorsque la valeur de \texttt{a} ou de \texttt{b(x)} changera, la valeur de \texttt{c} sera également mise à jour.
-\end{itemize}
+\begin{figure}[!h]
+	\begin{lstlisting}
+	Signal {
+	if (a.value) b.value else c.value
+	}
+	\end{lstlisting}
+	\caption{Définition d'un signal expression avec branches}
+	\label{fig:signal-expr-branches}
+\end{figure}
 
-La sémantique des signaux, basée sur les valeurs plutôt que la séquences de ces valeurs, a pour but d'être la plus adaptée possible à l'usage qui en est fait dans ce travail, c'est à dire la conception d'interfaces graphique. Dans cette optique, la sémantique associée à la compréhension \texttt{for} par les signaux semble plus adaptées que la sémantique non-déterministe des \texttt{Rx}.
+Selon la situation, l'usage d'une expression pour définir un signal peut se révéler plus simple que la combinaison de nombreuses opérations monadiques pour composer le comportement attendu, surtout dans les cas les plus complexes. À l'inverse pour une simple transformation, \texttt{map} peut se révéler plus concis. Le développeur est ainsi libre de choisir l'interface la plus appropriée pour chaque situation.
 
-Une conséquence supplémentaire de cette différence entre signaux et \texttt{Rx} est la possibilité de définir aisément le concept de \emph{signal expression} dans le cas des signaux. Dans le cas des \texttt{Rx}, le comportement attendu d'une telle construction n'est pas évident dans une situation où les flux sont potentiellement finis. \textit{A PRECISER}
+\subsubsection{Contraintes des expressions}
 
-\section{Comparaisons}
-\section{MonadicHTML}
+Les signaux doivent être considérés comme des constructions quasi-pure selon un point de vue fonctionnel. Ils sont en effet intrinsèquement dépendant du temps mais ne présentent pas d'effet de bords visibles \emph{à un instant donné}. Il est ainsi important que l'expression utilisée comme définition respecte ce principe en ne provoquant aucun effet de bord et en ne dépendant d'aucune valeur non-constante qui ne serait pas un signal.
+
+En effet, si une valeur mutable non-signal est référencée par une expression, la valeur résultante sera alors dépendante de l'instant d'évaluation du signal qui peut être arbitrairement retardée par le comportement \emph{lazy} des signaux.
+
+Il est aussi important que l'évaluation d'une expression s'effectue de façon synchrone. En effet la liste de dépendances du signal est construite lors de l'évaluation de l'expression. Si un signal parent est accédé de façon asynchrone ou \emph{lazy}, la dépendance ne sera pas identifiée et le signal ne sera pas correctement invalidé en cas de changement du signal parent.
+
+Les deux principaux coupables à éviter sont \texttt{Future} et \texttt{Stream}. Le premier pour son comportement clairement asynchrone, le second pour sa sémantique \emph{lazy}. En revanche les opérations telles que \texttt{Option.orElse} ne sont pas un problème car leur paramètre, bien que \emph{by-name}, est évalué de façon synchrone au moment de l'évaluation du signal.
+
+\subsection{Observateurs} \label{sec:sig-obs}
+
+Un observateur permet d'ajouter des effets de bords aux changements d'états d'un signal.
 
 \section{Framework reactif}
 
