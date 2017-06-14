@@ -1,0 +1,37 @@
+@startuml
+
+!define TRAIT (T, #B6DDA7)
+!define CLASS (C, #B9D2E2)
+!define OBJECT (O, #ECC585)
+
+'skinparam defaultFontName Consolas
+
+hide fields
+hide methods
+
+interface Signal <<TRAIT>> {
+	value: T
+	option: Option[T]
+}
+
+interface Immutable <<TRAIT>> extends Signal
+
+class Constant <<CLASS>> extends Immutable
+class Undefined <<OBJECT>> extends Immutable
+
+interface Mutable <<TRAIT>> extends Signal
+
+class Source <<CLASS>> extends Mutable
+
+interface Child <<TRAIT>> extends Mutable
+
+abstract class Expression <<CLASS>> extends Child
+
+interface Strict <<TRAIT>> extends Child
+interface Lazy <<TRAIT>> extends Child
+
+class StrictExpression <<CLASS>> extends Expression, Strict
+class LazyExpression <<CLASS>> extends Expression, Lazy
+
+
+@enduml

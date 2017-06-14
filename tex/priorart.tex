@@ -14,7 +14,7 @@ Bien que tous deux soient une abstraction du temps, les \texttt{Rx} représenten
 		Type de base & Type réactif & Différence \\ \midrule
 		\texttt{Stream[T]} & \texttt{Rx[T]} & Tous les éléments d'un \texttt{Stream} sont calculables à l'instant présent, les éléments d'une \texttt{Rx} ne sont peut être pas encore disponibles \\
 		&  & \\
-		\texttt{Future[T]} & \texttt{Signal[T]} & Un \texttt{Future} n'est résolu qu'une seule fois, un \texttt{Signal[T]} peut changer de valeur de multiples fois au cours du temps \\ \bottomrule
+		\texttt{Future[T]} & \texttt{Signal[T]} & Un \texttt{Future} n'est résolu qu'une seule fois, un \texttt{Signal} peut changer de valeur de multiples fois au cours du temps \\ \bottomrule
 	\end{tabular}
 \end{table}
 
@@ -48,7 +48,7 @@ et produira des résultats radicalement différents selon l'abstraction utilisé
 	\item Dans le cas de \texttt{Signal}, le résultat est un signal \texttt{c} dont la valeur est le double de celle d'un signal contenu dans le tableau \texttt{b} et désigné par la valeur du signal \texttt{a}, le tout sur la base des valeurs de ces signaux au moment présent. Dans le future, lorsque la valeur de \texttt{a} ou de \texttt{b(x)} changera, la valeur de \texttt{c} sera également mise à jour.
 \end{itemize}
 
-La sémantique des signaux, basée sur les valeurs plutôt que la séquences de ces valeurs, a pour but d'être la plus adaptée possible à l'usage qui en est fait dans ce travail, c'est à dire la conception d'interfaces graphique. Dans cette optique, la sémantique associée à la compréhension \texttt{for} par les signaux semble plus adaptées que la sémantique non-déterministe des \texttt{Rx}.
+La sémantique des signaux, basée sur les valeurs plutôt que la séquences de ces valeurs, a pour but d'être la plus adaptée possible à l'usage qui en est fait dans ce travail, c'est à dire la conception d'interfaces graphique.
 
 Une conséquence supplémentaire de cette différence entre signaux et \texttt{Rx} est la possibilité de définir aisément le concept de \emph{signal expression} dans le cas des signaux. Dans le cas des \texttt{Rx}, le comportement attendu d'une telle construction n'est pas évident dans une situation où les flux sont potentiellement finis. \textit{A PRECISER}
 

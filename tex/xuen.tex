@@ -1,4 +1,4 @@
-\chapter{Haut-niveau}
+\chapter{Xuen: Spécification}
 
 \section{Signal}
 
@@ -6,11 +6,11 @@
 
 La construction d'interfaces utilisateur met en évidence la problématique de la gestion des interactions et du maintient de la cohérence des informations présentées. En effet, les actions effectuées par l'utilisateur modifient l'état du logiciel et requièrent alors une actualisation de l'affichage. Lorsque l'interface devient complexe, maintenir une cohérence globale présente une difficulté de plus en plus importante. Le problème est exacerbé lorsque les modifications de l'état ne proviennent pas uniquement de l'utilisateur mais peuvent également survenir par l'action de processus asynchrones tel qu'une tâche de fond ou une connexion réseau.
 
-La séparation classique Modèle-Vue-Contrôleur repose généralement la notion d'\emph{Observable} et d'\emph{Observateur} pour lier Vue et Modèle. Ce concept présente cependant de multiples inconvénients tel que la promotion d'effets de bord, une diminution de l'encapsulation, une verbosité excessive; le rendant ainsi fastidieux à l'utilisation et sujet à erreurs\cite{odersky2012}.
+La séparation classique Modèle-Vue-Contrôleur repose généralement la notion d'\emph{Observable} et d'\emph{Observateur} pour lier Vue et Modèle. Ce concept présente cependant de multiples inconvénients tel que la promotion d'effets de bord, une diminution de l'encapsulation, une verbosité excessive; le rendant ainsi fastidieux à l'utilisation et sujet à erreurs \cite{odersky2012}.
 
-Ingo Maier et Martin Odersky proposent ainsi une approche plus fonctionnelle et composable avec la bibliothèque \emph{Scala.React}\cite{scala-react} avec entre autres la notion de signal: une valeur pouvant varier avec le temps. Cependant les signaux ne sont qu'un des multiples outils mis à disposition et l'utilisation de la bibliothèque se révèle être excessivement complexe, même dans les cas les plus simples\cite[\small Related~Work]{scala.rx}.
+Ingo Maier et Martin Odersky proposent ainsi une approche plus fonctionnelle et composable avec la bibliothèque \emph{Scala.React} \cite{scala-react} avec entre autres la notion de signal: une valeur pouvant varier avec le temps. Cependant les signaux ne sont qu'un des multiples outils mis à disposition et l'utilisation de la bibliothèque se révèle être excessivement complexe, même dans les cas les plus simples \cite[\small Related~Work]{scala.rx}.
 
-Partant de ce constat, Li Haoyi a ainsi développé \emph{Scala.Rx}\cite{scala.rx}: une réimplémentation simplifiée du concept de signaux avec une emphase sur la simplicité, à la fois au niveau de la conception que de l'utilisation. Cependant, par simplicité, plusieurs limitations ont été volontairement imposées et se révèlent être particulièrement gênantes dans le cadre de ce projet.
+Partant de ce constat, Li Haoyi a ainsi développé \emph{Scala.Rx} \cite{scala.rx}: une réimplémentation simplifiée du concept de signaux avec une emphase sur la simplicité, à la fois au niveau de la conception que de l'utilisation. Cependant, par simplicité, plusieurs limitations ont été volontairement imposées et se révèlent être particulièrement gênantes dans le cadre de ce projet.
 
 Xuen implémente ainsi un concept de signaux largement basés sur ceux de \emph{Scala.Rx}, mais dont les fonctionnalités ont été spécifiquement adaptées à leurs utilisation dans le cadre du développement d'interfaces utilisateur.
 
@@ -22,7 +22,9 @@ Un signal peut également posséder un nombre quelconque de signaux \emph{parent
 
 L'arbre de signaux ainsi construit représente alors un ensemble de transformations fonctionnelles appliquées de façon continue sur les valeurs des signaux sources situés à la racine et permettant d'en dériver les valeurs des signaux feuilles, correspondant aux valeurs utiles à l'application réalisée.
 
-\subsection{Accès}
+À noter également que le type \texttt{Signal[T]} est covariant avec son paramètre de type \texttt{T}. Ainsi, \texttt{Signal[T] <: Signal[U]} $\iff$ \texttt{T <: U}\footnote{\texttt{T <: U} désigne une relation de sous-type (\texttt{T extends U})}. Ainsi, un signal de type \texttt{Signal[Nothing]} est un sous-type de tous les signaux puisque \texttt{Nothing} est le \emph{bottom type} de Scala\footnote{\texttt{Nothing} est le sous-type de tous les types, il n'en existe aucune instance}.
+
+\subsection{Accès à l'état courant}
 
 L'interface d'un signal \texttt{Signal[T]} défini deux méthodes pour accéder à sa valeur courante:
 \begin{enumerate}
@@ -33,56 +35,60 @@ L'interface d'un signal \texttt{Signal[T]} défini deux méthodes pour accéder 
 
 \subsection{Construction}
 
-Les signaux sont généralement créés par transformation des signaux existants. Cependant, dans le cas où un signal racine doit être construit, quatre méthodes sont disponibles, donc les 3 premières sont des fonctions de l'objet \texttt{Signal}:
+Les signaux sont généralement créés par transformation des signaux existants. Cependant, dans le cas où un signal racine doit être construit, quatre méthodes sont disponibles. Les deux premières sont des fonctions de l'objet compagnon du trait \texttt{Signal}:
 
-\begin{center}
-	\code{def Signal.apply[T](expr: => T): Signal[T]}
-	\code{def Signal.define[T](expr: => Option[T]): Signal[T]}
-	\code{def Signal.wrap[T](value: T): Constant[T]}
-\end{center}
+\begin{itemize}
+	\item \code{def Signal.apply[T](expr: => T): Signal[T]}
+	\item \code{def Signal.define[T](expr: => Option[T]): Signal[T]}
+\end{itemize}
 
-Les deux premières méthodes, \texttt{apply} et \texttt{define} sont les constructeurs de signaux expressions dont la sémantique est plus précisément décrite en section \ref{sec:sig-expr}. L'expression sera évaluée pour déterminer la valeur du signal et les dépendances vers d'autres signaux seront automatiquement identifiées.
+Ces méthodes sont les constructeurs de signaux expressions dont la sémantique est plus précisément décrite en section \ref{sec:sig-expr}. L'expression sera évaluée pour déterminer la valeur du signal et les dépendances vers d'autres signaux seront automatiquement identifiées.
 
-La troisième méthode, \texttt{wrap}, permet l'utilisation d'une valeur non-signal de type \texttt{T} à la place d'une valeur signal de type \texttt{Signal[T]}. Le type de retour \texttt{Constant[T]} est un sous-type de \texttt{Signal[T]}. La section \ref{sec:sig-hierarchy} présente plus en détail la hiérarchie des signaux.
+Une troisième méthode de construction des signal consiste en l'utilisation d'une \texttt{Source[T]}, un sous-type de \texttt{Signal[T]}. Deux constructeurs sont disponibles selon que l'état initial désiré soit \emph{défini} ou \emph{indéfini}.
 
-\subsubsection{Sources}
-
-Une quatrième méthode de construction des signal consiste en l'utilisation d'une \texttt{Source[T]}, un sous-type de \texttt{Signal[T]}. Deux constructeurs sont disponible selon que l'état initial désiré soit \emph{défini} ou \emph{indéfini}.
-
-\begin{center}
-	\code{def Source.apply[T](value: T): Source[T]}
-	\code{def Source.undefined[T]: Signal[T]}
-\end{center}
+\begin{itemize}
+	\item \code{def Source.apply[T](value: T): Source[T]}
+	\item \code{def Source.undefined[T]: Source[T]}
+\end{itemize}
 
 Une instance de \texttt{Source[T]} offre une méthode de mutation
 \begin{center}
 	\code{def := (value: T): Unit}
 \end{center}
-permettant d'impérativement mettre à jour la valeur contenue dans la source. Cette opération est traitée comme un changement d'état de la source et provoquera l'invalidation récursive des tous les signaux dépendant de cette source.
+permettant de mettre à jour la valeur contenue dans la source de façon impérative. Cette opération est un changement d'état de la source et provoquera l'invalidation récursive des tous les signaux en dépendant.
 
 Une source est destinée à être utilisées lors de la construction de système hybrides, combinant code impératif basé sur les effets de bords et code fonctionnel. La source est alors un point d'entrée dans le graphe de dépendances des signaux pour la partie de code impérative.
 
-\subsection{Transformations monadiques}
+Finalement, l'objet \texttt{Signal.undefined} est une l'instance unique représentant un signal constant indéfini. Celui-ci est de type \texttt{Signal[Nothing]} et peut donc se substituer à n'importe quel signal.
 
-Une première interface de transformation des signaux\footnote{L'autre interface étant l'utilisation des signaux expressions, décrits en section \ref{sec:sig-expr}} est l'ensemble des opérations monadiques bien connues en programmation fonctionnelle. Chacune de ces opérations s'applique sur une instance de \texttt{Signal} et retourne un nouveau signal selon une sémantique propre à l'opération.
+\subsection{Opérateurs de transformations}
+
+Une première interface de manipulation des signaux\footnote{L'autre interface étant l'utilisation des signaux expressions, décrits en section \ref{sec:sig-expr}} est l'ensemble des opérations de transformation bien connues en programmation fonctionnelle. Chacune de ces opérations s'applique sur une instance de \texttt{Signal} et retourne un nouveau signal selon une sémantique propre à l'opération.
 
 Dans les exemples ci-dessous, les opérations sont supposées appliquées à une instance de type \texttt{Signal[T]}, \texttt{T} faisant ainsi référence au type d'élément contenu dans le signal original. Seuls les opérateurs les plus courants et ceux utilisés par le compilateur Scala lors de la compilation d'une compréhension \emph{for} sont traités ici, la Scaladoc du projet contient une liste exhaustive des opérations disponibles sur les instances de \texttt{Signal[T]}.
 
 \subsubsection{Opérateur de transformation (\texttt{map})}
 
-\begin{center}
-	\code{def map[U](f: T=>U): Signal[U]}
-\end{center}
+\begin{itemize}
+	\item \code{def map[U](f: T=>U): Signal[U]}
+\end{itemize}
 
 La fonction \texttt{map} effectue une opération de transformation sur la valeur d'un signal en appliquant la fonction \texttt{f} à la valeur courante du signal et retournant un nouveau signal contenant en tout temps le résultat de cette transformation.
 
-\textit{EXEMPLE: ???}
+\begin{figure}[h]
+	\begin{lstlisting}
+val a: Signal[Int] = Source(4)
+val b: Signal[Double] = a.map(Math.sqrt(_)) // b.value -> 2.0
+a := 9 // b.value -> 3.0
+	\end{lstlisting}
+	\caption{Exemple d'utilisation de \texttt{map}}
+\end{figure}
 
 \subsubsection{Opérateur de sélection (\texttt{flatMap})}
 	
-\begin{center}
-	\code{def flatMap[U](f: T=>Signal[U]): Signal[U]}
-\end{center}
+\begin{itemize}
+	\item \code{def flatMap[U](f: T=>Signal[U]): Signal[U]}
+\end{itemize}
 
 Dans le cas des signaux, \texttt{flatMap} implémente une opération de sélection: étant donné un signal \texttt{a} de type \texttt{Signal[T]} et une transformation sous la forme d'une fonction \texttt{f: T => Signal[U]}, la fonction \texttt{f} est appliquée à la valeur actuelle du signal \texttt{a} afin d'obtenir un second signal \texttt{b} de type \texttt{Signal[U]} et retourne un troisième signal \texttt{c} également de type \texttt{Signal[U]} dont la valeur est en tout temps égale à celle du signal \texttt{b}. La fonction \texttt{f} est réévaluée à chaque changement d'état du signal \texttt{a} afin de définir un nouveau signal de référence \texttt{b}.
 
@@ -90,27 +96,62 @@ Si le signal \texttt{a} est indéfini, la fonction \texttt{f} n'est pas appliqu�
 
 La fonction \texttt{flatMap}\footnote{\emph{bind} en Haskell, ou \texttt{>>=}} est la fonction universelle de transformation des monades. Elle est suffisamment générale pour permettre de définir toutes les autres fonctions de transformation comme des cas particuliers de \texttt{flatMap}. Par exemple, la transformation \texttt{a.map(f)} peut également s'écrire  sous la forme \texttt{a.flatMap(value => Constant(f(value))}.
 
-\textit{EXEMPLE: ???}
+\begin{figure}[h]
+	\begin{lstlisting}
+val choice: Signal[Int] = ...
+def selectSignal(choice: Int): Signal[T] = ...
+// L'état de `c` est identique à celui du signal retourné par `selectSignal` pour la valeur courante de `choice`
+val c: Signal[T] = choice.flatMap(selectSignal)
+	\end{lstlisting}
+	\caption{Exemple d'utilisation de \texttt{flatMap}}
+\end{figure}
 
 \subsubsection{Opérateur de filtrage (\texttt{filter})}
 
-\begin{center}
-	\code{def filter(p: T=>Boolean): Signal[T]}
-\end{center}
+\begin{itemize}
+	\item \code{def filter(p: T=>Boolean): Signal[T]}
+\end{itemize}
 
 La fonction \texttt{filter} effectue une opération de filtrage d'un signal en appliquant un prédicat \texttt{p} à la valeur courante du signal et retournant un nouveau signal de même valeur si le prédicat est vérifié, ou un signal indéfini si le prédicat n'est pas vérifié.
 
-\textit{EXEMPLE: ???}
+\begin{figure}[h]
+	\begin{lstlisting}
+val a: Signal[Int] = Source(4)
+val b: Signal[Int] = a.filter(_ % 2 == 0) // b.option -> Some(4)
+a := 5 // b.option -> None, b.value -> UndefinedSignalException
+	\end{lstlisting}
+	\caption{Exemple d'utilisation de \texttt{filter}}
+\end{figure}
 
 \subsubsection{Opérateur de combinaison (\texttt{fold})}
 
-\begin{center}
-	\code{def fold[U](a: U)(f: (U, T)=>U): Signal[U]}
-\end{center}
+\begin{itemize}
+	\item \code{def fold[U](a: U)(f: (U, T)=>U): Signal[U]}
+	\item \code{def foldStrict[U](a: U)(f: (U, T)=>U): Signal[U]}
+\end{itemize}
 
-L'opérateur \texttt{fold} possède la particularité d'introduire un effet de \emph{mémoire} aux signaux. Il prend en paramètre un \emph{état initial} \texttt{a} de type \texttt{U} et une fonction de combinaison \texttt{f: (U, T) => U} permettant d'associer la valeur courante du signal à cet état pour produire un \emph{état courant}, également de type \texttt{U}, qui sera contenu dans le signal produit par l'opérateur.
+L'opérateur \texttt{fold} permet l'introduction d'un effet de \emph{mémoire} aux signaux. Il prend en paramètre un \emph{état initial} \texttt{a} de type \texttt{U} et une fonction de combinaison \texttt{f: (U, T) => U} permettant d'associer la valeur courante du signal à cet état pour produire un \emph{état courant}, également de type \texttt{U}, qui sera alors la valeur du signal produit par l'opérateur.
 
 Lors d'un changement d'état du signal initial, l'\emph{état antérieur} est combiné à la nouvelle valeur du signal pour former le nouvel \emph{état courant}. Si le signal est indéfini la fonction \texttt{f} n'est pas évaluée et l'\emph{état antérieur} devient l'\emph{état courant} sans modification. Dans le cas où le signal est initialement indéfini, l'\emph{état initial} devient l'\emph{état courant} tel quel.
+
+L'opérateur \texttt{fold} possède la particularité d'être affecté par le mode d'évaluation du signal. Dans le cas d'une évaluation stricte ...
+
+\textit{EXEMPLE: HOLD VALUE}
+
+\subsubsection{Opérateurs d'encapsulation (\texttt{wrap / unwrap})}
+
+\begin{itemize}
+	\item \code{def wrap: Signal[Option[T]]}
+	\item \code{def unwrap[U](implicit ev: T <:< Option[U]): Signal[U]}
+\end{itemize}
+
+L'opérateur \texttt{wrap} transforme un signal d'origine de type \texttt{T} en un signal de type \texttt{Option[T]}. Lorsque le signal initial est défini, ce nouveau signal sera défini à \texttt{Some(value)}, avec \texttt{value} la valeur actuelle du signal original. Dans le cas où il serait indéfini, le signal de retour est défini à \texttt{None}.
+
+Cette opération garantit ainsi un signal toujours défini à une instance d'\texttt{Option} et permet de contourner la sémantique des opérateurs de transformations vis-à-vis des signaux indéfinis. Ceci permet de traiter avec des opérateurs tel que \texttt{map}, \texttt{fold}, etc., les valeurs définies mais également indéfinies d'un signal.
+
+L'opération \texttt{unwrap} effectue la transformation inverse. Si le signal initial possède une valeur \texttt{Some(v)}, la valeur du signal retourné est simplement égale à \texttt{v}. Dans le cas où le signal original vaut \texttt{None}, le signal résultant est indéfini.
+
+Cette opération ne peut être appliquée que sur une instance de signal de type \texttt{Signal[Option[U]]} pour un \texttt{U} quelconque. Le paramètre implicite n'est rien d'autre qu'une implémentation de cette contrainte \footnote{La même technique est utilisée par les collections de Scala pour l'implémentation de la méthode \texttt{flatten}.}. Si celle-ci est respectée, le compilateur Scala sera en mesure de fournir une valeur pour ce paramètre implicite. En revanche, si le type du signal ne correspond pas, une erreur de compilation liée à l'absence du paramètre implicite sera générée. Le développeur n'a donc pas à ce soucier de ce paramètre et peut se contenter de l'utiliser telle qu'une méthode sans paramètres.
 
 \textit{EXEMPLE: HOLD VALUE}
 
@@ -139,9 +180,9 @@ Dans l'exemple de la figure \ref{fig:signal-expr-branches}, le signal construit 
 
 \begin{figure}[!h]
 	\begin{lstlisting}
-	Signal {
+Signal {
 	if (a.value) b.value else c.value
-	}
+}
 	\end{lstlisting}
 	\caption{Définition d'un signal expression avec branches}
 	\label{fig:signal-expr-branches}
@@ -161,7 +202,9 @@ Les deux principaux coupables à éviter sont \texttt{Future} et \texttt{Stream}
 
 \subsection{Observateurs} \label{sec:sig-obs}
 
-Un observateur permet d'ajouter des effets de bords aux changements d'états d'un signal.
+Les observateurs permettant d'ajouter des effets de bords aux changements d'états d'un signal. De la même façon que les sources sont un point d'entrée dans un graphe de signaux, les observateurs sont les points de sorties.
+
+\textit{À développer}
 
 \section{Framework reactif}
 

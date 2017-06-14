@@ -1,11 +1,34 @@
-\chapter{Bas-niveau}
+\chapter{Xuen: Implémentation}
 
 \section{Signaux}
 
 \subsection{Hiérarchie}
 \label{sec:sig-hierarchy}
 
-\textit{ICI UN DIAGRAMME DE LA HIERARCHIE DES SIGNAUX}
+La figure \ref{sec:sig-hierarchy} présente la hiérarchie formée par les différentes classes de signaux. Cette section aborde plus en détails les spécificités de chacune d'elles.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=10cm]{img/sig_hierarchy.eps}
+	\caption{Hiérarchie des signaux}
+	\label{fig:sig-hierarchy}
+\end{figure}
+
+\subsubsection{\texttt{Signal}}
+
+Le trait racine de la hiérarchie expose les opérations communes à tous les signaux: accès à la valeur courante et opération de transformation. C'est une interface générique qui ne précise aucune sémantique particulière pour le signal. Elle est ainsi adaptée lorsque le type exact de signal manipulé n'est pas important, ce qui est généralement le cas.
+
+\subsubsection{\texttt{Immutable}}
+
+Cette première division distingue les signaux dont la valeur change au cours du temps de ceux pour lesquels la valeur reste constante.
+
+\subsubsection{\texttt{Mutable}}
+
+\subsubsection{\texttt{Lazy}}
+
+\subsection{Implémentation des opérateurs monadiques}
+
+\textit{CONTRAIREMENT À REACTIVEX, PAS DE CLASSES, MAIS UTILISATION DES EXPRESSIONS}
 
 \subsection{Modèle push, pull ou hybride}
 

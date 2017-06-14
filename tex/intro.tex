@@ -3,19 +3,100 @@
 \section{Programmation réactive-fonctionnelle}
 \section{Objectifs}
 
+
+
 \section{Technologies utilisées}
 
-\begin{enumerate}
-	\item \textbf{Web Components}: un ensemble d'APIs de la plateforme web destiné à permettre de construire simplement des composants réutilisables et portables grâce au support natif de la technologie dans les navigateurs web modernes. \textit{Web Components} est le regroupement de quatre spécifications plus ciblées:
-	\begin{itemize}
-		\item \textbf{Custom Elements}: cette première spécification défini une API pour la définition de nouveau élément DOM. En pratique, cela se traduit par la capacité à créer de nouvelle balise HTML reconnue par le navigateur et d'y associer des comportements spécifiques. Il est également possible d'étendre une balise existante selon une forme d'héritage, mais cette fonctionnalité n'est pas exploitée dans ce travail
-		
-		\item \textbf{Shadow DOM}: défini un mécanisme permettant d'encapsuler un sous-arbre DOM et des styles CSS associés afin de les rendre invisibles de l'extérieur de l'élément hôte. Ce système est largement utilisé pour réaliser l'implémentation interne des éléments personnalisés et limiter ainsi les risques de conflits avec les autres éléments présents dans le document. De plus, les styles CSS placés dans un sous-arbre caché ne peuvent affecter que les éléments de ce sous-arbre, limitant ainsi leur portée.
-		
-		\item \textbf{HTML Imports}: défini un mécanisme permettant d'importer un document HTML dans un autre document. Dans le cadre de ce travail, cette technologie ne sera pas utilisée. Les composants sont en effet définis entièrement en \textit{Scala.js} et sont donc distribués avec le fichier script compilé de l'application et non dans des documents HTML séparés.
-		
-		\item \textbf{HTML Template}: défini l'élément HTML \code{<template>} permettant la définition de fragment de document inactifs\footnote{Les images contenues dans ce fragment de document ne sont pas chargées, les scripts ne sont pas exécutés, etc.} qui pourront être instanciés dynamiquement par un script à l'exécution.
-	\end{itemize}
+\subsection{Web Components}
 
-	\item \textbf{Scala.js}: ...
+\emph{Web Components} un ensemble d'extensions aux spécifications HTML et DOM destinées à permettre le développement de composants isolés et réutilisables pour la construction de page web, de façon simple et portable grâce au support natif de la technologie dans les navigateur modernes.
+
+Le nom \emph{Web Components} regroupe en réalité un ensemble de quatre technologies distinctes, dont le support varie selon le navigateurs utilisé:
+\begin{enumerate}
+	\item Templates
+	\item HTML Imports
+	\item Custom Elements
+	\item Shadow DOM
 \end{enumerate}
+
+Le concept est généralement attribué à Alex Russell \cite{russell2011} qui le présente à l'occasion de la \emph{Fronteers Conference 2011}. Il est alors un développeur de la bibliothèque d'interface Dojo avant d'être engagé par Google pour travailler au développement de la plateforme web, du moteur de rendu Blink et du navigateur Google Chrome \cite{russellIN}.
+
+La première implémentation est développée en 2013 par Google comme fondations pour sa bibliothèque \emph{Polymer}\footnote{\url{https://www.polymer-project.org/}}, principalement dans un but expérimental et afin de collecter des avis. Les autres développeurs de navigateur, notamment Mozilla, Microsoft et Apple n'y participent pratiquement pas et le résultat ne fait pas l'unanimité \cite{stateOfWebComp}. De nombreuses discussions sont alors entreprises pour trouver un terrain d'entente et arriver à une spécification finale commune.
+
+\subsubsection{État actuel de l'implémentation}
+
+Aujourd'hui, les efforts d'implémentation sont toujours en cours. Les dernières versions des navigateurs Chrome, Opera et Safari supportent la plus grande partie de la spécification. L'implémentation de Firefox est toujours en cours de développement tandis que Microsoft considère son implémentation comme \emph{haute-priorité}. La table \ref{tab:webcomp-support} résume l'état actuel des implémentations.
+
+\begin{table}[h]
+	\centering
+	\caption{Support des technologies Web Component}
+	\label{tab:webcomp-support}
+	\begin{tabular}{@{}lcccc@{}}
+		\toprule
+		& Chrome/Opera & Firefox   & Safari  & Edge      \\ \midrule
+		Templates       & Stable         & Stable    & Stable    & Partiel   \\
+		HTML Imports    & Stable         & Non prévu & Non prévu & Considéré \\
+		Custom Elements & Partiel        & En cours  & Partiel   & Considéré \\
+		Shadow DOM      & Stable         & En cours  & Buggé   & Considéré \\ \bottomrule
+	\end{tabular}
+\end{table}
+
+Concernant \emph{Custom Elements} et \emph{Shadow DOM}, les versions initiales de ces technologies sont à présents appelées \emph{versions 0}. Les versions actuelles dont il est question ici sont les \emph{versions 1}.
+
+L'implémentation des \emph{Custom Elements v1} par Chrome, Opera et Safari est complète en ce qui concerne la définition de nouveaux éléments indépendants. Il n'est cependant pas possible pour le moment d'étendre des éléments natifs du navigateur, fonctionnalité prévue par la spécification. Dans le cadre de ce travail, cette fonctionnalité n'étant pas utilisée, il est possible de considérer ces implémentations comme complètes.
+
+Les bugs mentionnés pour l'implémentation de \emph{Shadow DOM v1} par Safari concernent des problèmes liés aux sélecteurs CSS \texttt{:host} et \texttt{::slotted} introduit par la spécification.
+
+\subsubsection{Templates}
+
+Cette extension ajoute la balise \texttt{<template>} au standard HTML. Son objectif est d'offrir aux développeur un mécanisme permettant l'inclusion de fragments de page dans un document HTML sans que celui-ci ne soit exécuté, il est alors dit \emph{inerte}.
+
+Comme exemple, sans cet élément, une image avec un attribut \texttt{src} était immédiatement téléchargée par le navigateur. Dans une application web utilisant le framework Angular 1, il était alors fréquent de voir des images déclarée en utilisant l'attribut spécial \texttt{ng-src} qui était ensuite transformé en simple \texttt{src} une fois l'évaluation de l'expression de \emph{databinding} par le framework. Sans cela, le navigateur aurait tenté de charger une image à l'adresse "\texttt{\{\{imgSrc\}\}}", résultant en une erreur avant que le framework Angular puisse avoir l'occasion d'évaluer l'expression et de modifier l'attribut.
+
+Avec l'élément \texttt{<template>}, son contenu est \emph{parsé} et transformé en structure de noeuds DOM de façon similaire à n'importe quel autre élément, mais leurs effets ne sont pas exécutés: les images ne sont pas chargées, les scripts pas exécutés, les styles pas appliqués, etc.
+
+Le contenu de cet élément est ensuite cloné de façon dynamique au \emph{runtime} par un script puis inséré sous un autre noeud du document en utilisant les APIs du DOM. Ce contenu sera alors exécuté de façon habituelle. Un même template peut également être cloné et inséré plusieurs fois, permettant la factorisation de code répété à travers un document HTML.
+
+\subsubsection{HTML Imports}
+
+Cette spécification introduit la possibilité pour une page web en HTML d'inclure un second document HTML. Ceci se traduisant par un attribut \texttt{rel="import"} sur l'élément \texttt{<link>}, déjà utilisé pour lier une feuille de styles CSS à un document.
+
+L'objectif visé est la possibilité pour un composant développé avec les API Web Components d'être contenu dans un unique fichier \texttt{.html} et chargé par la page hôte sans recourir à JavaScript.
+
+En pratique, cette fonctionnalité ne semble pas convaincre Mozilla et Apple qui n'ont pour l'instant pas annoncé une intention de l'intégrer dans leurs navigateurs Firefox et Safari.
+
+Dans le cadre de ce travail, cette partie des Web Components ne sera pas utilisée. En effet, l'objectif est de permettre de définir l'ensemble du composant à partir de code Scala compilé par Scala.js. Ce qui signifie combiner au niveau du code source la définition du comportement du composant (en Scala) avec son template (HTML) et son style visuel (CSS). Ainsi, l'ensemble des composants définis sont chargés d'un coup, en même temps que le code JavaScript produit par Scala.js.
+
+\subsubsection{Custom Elements}
+
+Cette technologie introduit une API pour la définition de nouveau élément DOM. En pratique, cela se traduit par la capacité à créer de nouvelle balise qui seront reconnue par le navigateur et d'y associer des comportements spécifiques lors de son instantiation, attachement ou détachement du document.
+
+Les réponses du composants aux interactions de l'utilisateurs se font quant à elles sur la base des événements classiques disponibles en JavaScript: par exemple enregistrement d'un gestionnaire pour l'événement \texttt{click} ou \texttt{keydown} sur l'élément, tel qu'il serait fait pour un simple élément \texttt{<div>}.
+
+La spécification prévoit également la possibilité d'étendre une balise existante selon une forme d'héritage. Il est ainsi possible de définir un type de bouton personnalisé, qui hériterait du comportement standard d'un bouton mais qu'il serait alors possible d'altérer. En pratique, cette fonctionnalité n'est pas encore supportée par les navigateurs.
+
+La définition de nouvelle balise est un concept clé de ce travail puisque chaque composant créé en Scala.js sera instancié par l'utilisation de sa balise associée dans le template d'un autre élément. En revanche, l'extension d'éléments existant ne sera pas exploité. Il est en effet trivial d'atteindre un effet similaire en définissant un nouvel élément contenant l'élément à altérer dans son sous-arbre DOM.
+
+\subsubsection{Shadow DOM}
+
+Probablement la spécification la plus complexe d'un point de vue implémentation pour les navigateurs et la plus difficile à \texttt{polyfill} en JavaScript. Elle définit un mécanisme permettant d'encapsuler un sous-arbre DOM et des styles CSS associés et de les rendre invisibles de l'extérieur. Ainsi:
+
+\begin{itemize}
+	\item les styles CSS déclarés hors du sous-arbre ne s'appliquent pas aux éléments du sous-arbre et inversement pour les styles déclarés dans le sous-arbre;
+	
+	\item les identifiants HTML (attributs \texttt{id}), en principe unique dans un document, peuvent être réutilisés dans un sous-arbre;
+	
+	\item les fonctions \texttt{getElementById} ou \texttt{querySelector} dépendent de l'élément depuis lequel elles sont appelées et ne peuvent pas traverser une frontière formée par un sous-arbre;
+	
+	\item les événements sont \emph{retargeted} à leur sortie d'un sous-arbre, leur attribut \texttt{target} indiquant depuis quel élément ils ont été émis est modifié pour référencer le noeud à la racine du sous-arbre au lieu de l'élément qui a réellement émis l'événement, à l'intérieur du sous-arbre.
+\end{itemize}
+
+Ce mécanisme est également clé à la réalisation de ce projet puisque chaque élément sera associé à son sous-arbre DOM caché contenant une instance de son template.
+
+\subsection{Scala.js}
+
+\textit{*** Présentation Scala.js ***}
+
+\subsubsection{Limitations actuelles en rapport avec les Web Components}
+
+\textit{Web Components requiert des classes ES6, obligation du coup d'utiliser le mode d'émission ES6 de Scala.js qui est expérimental. En pratique semble fonctionner. Mais du coup impossible d'utiliser Google Closure Compiler pour optimiser le script final. Conduisant à des fichiers JavaScript beaucoup plus volumineux que nécessaire. Support d'ES6 dans la roadmap de Closure Compiler, mais pas encore là. Une simple compression GZip réduit considérablement l'impact du problème.}

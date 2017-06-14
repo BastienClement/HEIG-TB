@@ -1,6 +1,8 @@
+.idea
 *.aux
 *.log
 *.toc
 *.out
 *.synctex.gz
 /main.pdf
+*-converted-to.pdf

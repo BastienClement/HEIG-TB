@@ -100,10 +100,6 @@ def hold[T](parent: Signal[T]): Signal[T] = {
 \section{Opérations élémentaires}
 
 	\subsection{Sélection (flatMap)}
-	
-		\begin{center}
-			\code{def flatMap[U](f: T=>Signal[U]): Signal[U]}
-		\end{center}
 		
 		\begin{align*}
 			flatMap(a, f)
@@ -117,11 +113,6 @@ def hold[T](parent: Signal[T]): Signal[T] = {
 	
 	\subsection{Application (map)}
 		
-		\begin{center}
-			\code{def map[U](f: T=>U): Signal[U]}
-		\end{center}
-		
-		Elle se définit comme une application particulière de \texttt{flatMap}:
 		\begin{align*}
 			map(a, f)
 				&\colon (Signal_{[T]}, T \to U) \to Signal_{[U]} \\
@@ -135,13 +126,6 @@ def hold[T](parent: Signal[T]): Signal[T] = {
 	
 	\subsection{Filtrage (filter)}
 	
-		La fonction \texttt{filter} effectue une opération de filtrage d'un signal en appliquant un prédicat \texttt{p} à la valeur courante du signal et retournant un nouveau signal de même valeur si le prédicat est vérifié, ou un signal indéfini si le prédicat n'est pas vérifié.
-	
-		\begin{center}
-			\code{def filter(p: T=>Boolean): Signal[T]}
-		\end{center}
-		
-		Elle se définit également comme une application particulière de \texttt{flatMap}:
 		\begin{align*}
 			filter(a, p)
 				&\colon (Signal_{[T]}, T \to Boolean) \to Signal_{[T]} \\
@@ -158,12 +142,6 @@ def hold[T](parent: Signal[T]): Signal[T] = {
 		
 	\subsection{Lecture}
 	
-		\begin{center}
-			\code{def option: Option[T]}\\
-			\code{def value: T}\\
-		\end{center}
-	
-		Permet l'accès à la valeur actuelle d'un signal.
 		\[
 			a.option = \begin{cases}
 				Some(a.value) & \text{si } a \text{ est défini}\\
