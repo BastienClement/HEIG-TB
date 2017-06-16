@@ -1,0 +1,34 @@
+@startuml
+!include prelude.iuml
+
+hide fields
+hide methods
+
+show Signal fields
+show Signal methods
+interface Signal <<TRAIT>> {
+	+option: Option[T]
+	+isDefined: Boolean
+	+isUndefined: Boolean
+	+value: T
+
+	+map[U](f: T => U): Signal[U]
+	+flatMap[U](f: T => Signal[U]): Signal[U]
+	+filter(p: T => Boolean): Signal[T]
+}
+
+
+interface Immutable <<TRAIT>> extends Signal
+interface Mutable <<TRAIT>> extends Signal
+
+class Constant <<CLASS>> extends Immutable
+class Undefined <<OBJECT>> extends Immutable
+
+show Source methods
+class Source <<CLASS>> extends Mutable {
+	+ := (value: T): Unit
+}
+
+class Expression <<CLASS>> extends Mutable
+
+@enduml

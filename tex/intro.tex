@@ -1,9 +1,24 @@
 \chapter{Introduction}
 
+De plus en plus d'activités sociales sont supportées par des technologies de l'information. Les applications web deviennent des médiateurs d'interactions sociales entre personnes, comme par exemple les réseaux sociaux. Des groupes de personnes se rencontrent dans le cyberespace pour s'échanger et poursuivre leurs loisirs. Ces interactions ne sont plus seulement asynchrones, mais deviennent synchrones, par exemple dans le cas des jeux vidéo en ligne. Des groupes de personnes relativement importants se réunissent pour jouer ensemble. Certains jeux nécessitent un haut degré de collaboration entre les membres d'un groupe. Cette collaboration peut être facilité par une application de gestion collaborative.
+
+Les technologies web évoluent très rapidement coté client (navigateur) et permettent de développer des applications de plus en plus interactives et temps réel. Notamment les frameworks récents comme ReactiveX offrent un nouveau paradigme de programmation réactive qui simplifie considérablement le développement d'applications hautement interactives.
+
 \section{Programmation réactive-fonctionnelle}
+
+La programmation réactive-fonctionnelle est une combinaison des paradigmes de programmation fonctionnelle et de programmation réactive.
+
+Ce premier paradigme, fonctionnel, met en avant l'utilisation de structure de données immutables et de l'application de fonctions sur ses structures afin d'en dériver de nouvelles. Les effets de bords et les états globaux sont évités par l'utilisation de fonctions pures ne dépendant que de leurs paramètres. Les principes de composabilité des fonctions et de transparence référentielle qui en découlent sont alors mis en avant pour promouvoir un style de programmation qui se veut plus clair et avec moins d'effets surprenant pour le développeur.
+
+La programmation réactive quant à elle prône une approche basée en premier lieu sur les données sources utilisées par l'application, les transformations qui leur sont appliquées et le maintient d'un état cohérent dans l'ensemble du logiciel lors des changements d'états du système.
+
+Dans l'approche mixte réactive-fonctionnelle, les sources de données réactives sont manipulées comme des structures fonctionnelle classiques et des fonctions, pures, leur sont appliquées afin de produire de nouvelles données réactive dérivée. Une relation de dépendance existe entre la donnée réactive produite en résultat de la fonction et la donnée source utilisée. L'objectif du système réactif-fonctionnel est alors de garantir qu'en cas de modification de la donnée source, les données dérivées soient correctement mises à jour par une réapplication de la fonction utilisée en premier lieu.
+
 \section{Objectifs}
 
+Ce travail a pour objectif le développement d'une application web hautement interactive avec le langage de programmation Scala, basée sur les principes de la programmation réactive-fonctionnelle et intégrant une gestion précises et temps-réel des interactions entres ses utilisateurs, dans le but de permettre l'organisation d'un groupe de joueurs dans un jeu en ligne multi-joueurs.
 
+Dans cette optique, une bibliothèque réactive-fonctionnelle -- Xuen -- sera développée en premier lieu afin de fournir les composants de base utilisés dans la construction de l'application: \emph{signaux}, \emph{templates} et \emph{data-binding}. L'accent sera mis sur le développement d'une bibliothèque générique et réutilisable, indépendante de l'application finale.
 
 \section{Technologies utilisées}
 
@@ -21,7 +36,7 @@ Le nom \emph{Web Components} regroupe en réalité un ensemble de quatre technol
 
 Le concept est généralement attribué à Alex Russell \cite{russell2011} qui le présente à l'occasion de la \emph{Fronteers Conference 2011}. Il est alors un développeur de la bibliothèque d'interface Dojo avant d'être engagé par Google pour travailler au développement de la plateforme web, du moteur de rendu Blink et du navigateur Google Chrome \cite{russellIN}.
 
-La première implémentation est développée en 2013 par Google comme fondations pour sa bibliothèque \emph{Polymer}\footnote{\url{https://www.polymer-project.org/}}, principalement dans un but expérimental et afin de collecter des avis. Les autres développeurs de navigateur, notamment Mozilla, Microsoft et Apple n'y participent pratiquement pas et le résultat ne fait pas l'unanimité \cite{stateOfWebComp}. De nombreuses discussions sont alors entreprises pour trouver un terrain d'entente et arriver à une spécification finale commune.
+La première implémentation est développée en 2013 par Google comme fondations pour sa bibliothèque \emph{Polymer} \cite{polymer-project}, principalement dans un but expérimental et afin de collecter des avis. Les autres développeurs de navigateur, notamment Mozilla, Microsoft et Apple n'y participent pratiquement pas et le résultat ne fait pas l'unanimité \cite{stateOfWebComp}. De nombreuses discussions sont alors entreprises pour trouver un terrain d'entente et arriver à une spécification finale commune.
 
 \subsubsection{État actuel de l'implémentation}
 

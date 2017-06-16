@@ -1,8 +1,6 @@
-\chapter{Xuen: Implémentation}
+\section{Implémentation}
 
-\section{Signaux}
-
-\subsection{Hiérarchie}
+\subsection{Hiérarchie complète}
 \label{sec:sig-hierarchy}
 
 La figure \ref{sec:sig-hierarchy} présente la hiérarchie formée par les différentes classes de signaux. Cette section aborde plus en détails les spécificités de chacune d'elles.
@@ -43,5 +41,3 @@ L'approche mixte \emph{push-pull} se base sur une approche principalement \emph{
 \subsection{Utilisation dans un environnement parallèle}
 
 \textit{Pas de threads en JavaScript, donc un problème que côté serveur. Bien que le système fonctionne sur la JVM, il n'a pas été testé de façon étendue dans un contexte multi-thread; actuellement half-baked: les Signaux eux-même sont en principe thread-safe (aka invalidation / recalcul / etc) mais le système en entier n'est pas réellement étudié (dead-lock de signaux interdépendant?). Est-ce que utile au projet puisqu'on le use-case principal est celui du framework web côté client? Quid des observeurs et de la sémantique exactly-once pour une bloc de mutation atomic{} ?}
-
-\section{Framework web}

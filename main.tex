@@ -1,4 +1,4 @@
-\documentclass[12pt, a4paper, twoside, frenchb]{book}
+\documentclass[11pt, a4paper, twoside, frenchb]{book}
 \usepackage{styles}
 
 \title{Développement d'une application web collaborative utilisant la programmation réactive-fonctionnelle}
@@ -9,8 +9,6 @@
 \usetikzlibrary{graphs, graphdrawing}
 \usegdlibrary{layered}
 
-\usepackage{booktabs}
-
 %\includeonly{tex/art}
 
 \begin{document}
@@ -19,12 +17,21 @@
 \tableofcontents
 
 \include{tex/intro}
-\include{tex/xuen}
-\include{tex/priorart}
-\include{tex/implementation}
+
+\part[Bibliothèque réactive-fonctionnelle]{Bibliothèque réactive-fonctionnelle \\
+	\vspace{1cm} {\normalfont Xuen}}
+\include{tex/signaux}
+\include{tex/web}
+%\include{tex/xuen}
+%\include{tex/priorart}
+%\include{tex/implementation}
+
+\part{Application Guild-Tools}
 \include{tex/guildtools}
 
-\include{tex/signals}
+\part{Annexes}
+\include{tex/apdx}
+
 
 \include{tex/bib}
 
