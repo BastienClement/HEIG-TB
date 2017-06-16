@@ -143,6 +143,11 @@ permettant de mettre à jour la valeur contenue dans la source de façon impéra
 
 Une source est destinée à être utilisées lors de la construction de système hybrides, combinant code impératif basé sur les effets de bords et code fonctionnel. La source est alors un point d'entrée dans le graphe de dépendances des signaux pour la partie de code impérative.
 
+\textit{À ajouter: une opération utilisant une fonction de mutation à partir de l'état courant:}
+\begin{lstlisting}
+	def ~= (f: T => T): Unit = { this := f(value) }
+\end{lstlisting}
+
 \subsection{Signal expression} \label{sec:sig-expr}
 
 Un signal expression est un signal dont la définition est une expression arbitraire. Un tel signal détermine automatiquement ses signaux parents en observant les signaux accédés lors de l'évaluation de l'expression et construit ainsi automatiquement son arbre de dépendances. Si l'un de ces signaux venait à changer, la valeur du signal expression serait recalculée.
@@ -179,7 +184,7 @@ Selon la situation, l'usage d'une expression pour définir un signal peut se ré
 
 Dans les cas les plus complexes, principalement lors de l'utilisation de structures de contrôles tel que des branches conditionnelles, des opérations de \emph{pattern matching} ou des boucles, une expression permet une définition concise et atomique du signal tandis que pour obtenir un résultat équivalent à l'aide des opérateurs de transformation, une longue chaîne de transformations successives, considérablement plus difficile à comprendre, serait nécessaire.
 
-À l'inverse, dans les cas plus simples, une opération de transformation permet de réutiliser un \texttt{pattern} de transformation établi, étant alors à la fois plus concis et mentalement plus simple puisqu'il utilise une sémantique clairement établie et commune.
+À l'inverse, dans les cas plus simples, une opération de transformation permet de réutiliser un \emph{pattern} de transformation établi, étant alors à la fois plus concis et mentalement plus simple puisqu'il utilise une sémantique clairement établie et commune.
 
 \subsubsection{Contraintes des expressions}
 
@@ -196,13 +201,15 @@ Il est intéressant de noter que la seule observation du paramètre de type du s
 \subsection{Opérateurs de transformations}
 Dans les exemples ci-dessous, les opérations sont supposées appliquées à une instance de type \texttt{Signal[T]}, \texttt{T} faisant ainsi référence au type d'élément contenu dans le signal original. Seules les opérateurs les plus courants et ceux utilisées par le compilateur Scala lors de la compilation d'une compréhension \texttt{for} sont traités ici. La Scaladoc du projet contient une liste exhaustive des opérations disponibles.
 
-\subsubsection{Opérateur de transformation (\texttt{map})}
+\subsubsection{Opérateur de transformation simple (\texttt{map})}
 
 \begin{itemize}
 	\item \code{def map[U](f: T=>U): Signal[U]}
 \end{itemize}
 
-La fonction \texttt{map} effectue une opération de transformation sur la valeur d'un signal en appliquant la fonction \texttt{f} à la valeur courante du signal et retournant un nouveau signal contenant en tout temps le résultat de cette transformation.
+La fonction \texttt{map} effectue une opération de transformation simple sur la valeur d'un signal en appliquant la fonction \texttt{f} à la valeur courante du signal et retournant un nouveau signal contenant en tout temps le résultat de cette transformation. En d'autre termes, lorsque l'état du signal original change, la fonction \texttt{f} est réévaluée avec la nouvelle valeur du signal parent et le signal enfant est mis à jour.
+
+Si le signal d'origine est indéfini, la fonction \texttt{f} n'est pas appliquée et le signal enfant prend également l'état indéfini.
 
 \begin{figure}[h]
 	\begin{lstlisting}
@@ -314,17 +321,23 @@ L'opérateur \texttt{wrap} transforme un signal d'origine de type \texttt{T} en 
 
 Cette opération garantit ainsi un signal toujours défini à une instance d'\texttt{Option} et permet de contourner la sémantique des opérateurs de transformations vis-à-vis des signaux indéfinis. Ceci permet de traiter avec des opérateurs tel que \texttt{map}, \texttt{fold}, etc., les valeurs définies mais également indéfinies d'un signal.
 
-L'opération \texttt{unwrap} effectue la transformation inverse. Si le signal initial possède une valeur \texttt{Some(v)}, la valeur du signal retourné est simplement égale à \texttt{v}. Dans le cas où le signal original vaut \texttt{None}, le signal résultant est indéfini.
-
-Cette opération ne peut être appliquée que sur une instance de signal de type \texttt{Signal[Option[U]]} pour un \texttt{U} quelconque. Le paramètre implicite n'est rien d'autre qu'une implémentation de cette contrainte \footnote{La même technique est utilisée par les collections de Scala pour l'implémentation de la méthode \texttt{flatten}.}. Si celle-ci est respectée, le compilateur Scala sera en mesure de fournir une valeur pour ce paramètre implicite. En revanche, si le type du signal ne correspond pas, une erreur de compilation liée à l'absence du paramètre implicite sera générée. Le développeur n'a donc pas à ce soucier de ce paramètre et peut se contenter de l'utiliser telle qu'une méthode sans paramètres.
-
 \begin{figure}[h]
 	\begin{lstlisting}
 // Construction d'un signal avec une valeur par défaut qui sera utilisée si le signal original est indéfini
-def default[U >: T](s: Signal[T]])(default: U): Signal[U] = {
-	s.wrap.map(opt => opt.getOrElse(default))
+def withDefault[U >: T](s: Signal[T]])(default: U): Signal[U] = {
+	val a: Signal[Option[T]] = s.wrap
+	a.map((opt: Option[T]) => opt.getOrElse(default))
 }
-	
+	\end{lstlisting}
+	\caption{Exemple d'utilisation de \texttt{wrap}}
+\end{figure}
+
+L'opération \texttt{unwrap} effectue la transformation inverse. Si le signal initial possède une valeur \texttt{Some(v)}, la valeur du signal retourné est simplement égale à \texttt{v}. Dans le cas où le signal original vaut \texttt{None}, le signal résultant est indéfini. Cette opération ne peut être appliquée que sur une instance de signal de type \texttt{Signal[Option[U]]} pour un \texttt{U} quelconque.
+
+Le paramètre implicite n'est rien d'autre qu'une implémentation de cette contrainte \footnote{La même technique est utilisée par les collections de Scala pour l'implémentation de la méthode \texttt{flatten}.}. Si celle-ci est respectée, le compilateur Scala sera en mesure de fournir une valeur pour ce paramètre implicite. En revanche, si le type du signal ne correspond pas, une erreur de compilation liée à l'absence du paramètre implicite sera générée. Le développeur n'a donc pas à se soucier de ce paramètre implicite et peut se contenter d'utiliser cette méthode tel que si elle ne prenait aucun paramètre.
+
+\begin{figure}[h]
+	\begin{lstlisting}
 // Définition de l'opérateur `reduce` à partir de `fold` et `unwrap`
 def reduce[U >: T](s: Signal[T])(op: (U, T) => U): Signal[U] = {
 	val a: Signal[Option[U]]] =
@@ -334,11 +347,57 @@ def reduce[U >: T](s: Signal[T])(op: (U, T) => U): Signal[U] = {
 	a.unwrap
 }
 	\end{lstlisting}
-	\caption{Exemple d'utilisation de \texttt{wrap} et \texttt{unwrap}}
+	\caption{Exemple d'utilisation de \texttt{unwrap}}
 \end{figure}
 
 \subsection{Observateurs} \label{sec:sig-obs}
 
-Les observateurs permettant d'ajouter des effets de bords aux changements d'états d'un signal. De la même façon que les sources sont un point d'entrée dans un graphe de signaux, les observateurs sont les points de sorties.
+Les observateurs permettent d'ajouter des effets de bords aux changements d'états d'un signal. De la même façon que les sources sont les points d'entrée dans un graphe de signaux, les observateurs sont les points de sorties.
 
-\textit{À développer}
+{\itshape
+
+Les observateurs ne sont pas encore implémentés au niveau de la bibliothèque. Quelques propriétés prévues:
+\begin{itemize}
+	\item Un observateur possède un ensemble de signaux qu'il observe
+	\item Il est invoqué lorsque l'état d'un de ces signaux change
+	\item Détection dynamique des signaux observés de façon similaire aux signaux expression; l'ensemble des signaux observés peut varier au cours du temps.
+	\item Un observateur peut être désactivé pour le déconnecter du graphe de signaux
+	\item Il peut être réactivé par la suite
+	\item Appelé de façon asynchrone à la fin d'un contexte de mutation atomique, avec la sémantique exactly-once.
+\end{itemize}
+
+
+
+Les blocs \texttt{atomically} peuvent être nestés, auquel cas ils n'ont aucun effet hormis pour le bloc le plus extérieur. La mutation d'une source est toujours associée à un contexte de mutation, il n'est donc pas nécessaire d'en définir un explicitement lors de la modification d'une seule valeur.
+
+}
+
+\subsection{Contexte de mutations atomiques}
+\textit{Ce concept est relativement récent dans mon développement, il est destiné à supporter l'implémentation des observateurs et à fournir une structure de base pour les mécanismes de thread-safety.}
+
+Un contexte de mutations est un bloc à l'intérieur duquel les changements apportés à un graphe de signaux sont appliqués de façon atomiques. Il prend la forme d'une construction de la forme:
+\begin{lstlisting}
+Signal.atomically {
+	// mutations...
+}
+\end{lstlisting}
+
+Aucun observateur n'est invoqué jusqu'à la sortie du bloc \texttt{atomically}. Il est ainsi possible d'effectuer une série de mutations dans un graphe de signaux et de ne notifier les observateurs qu'une seule fois à la fin.
+
+Ces blocs peuvent être imbriqués, dans ce cas, les blocs intérieurs n'ont pas d'effet et seul le bloc extérieur est considéré.
+
+Le bloc \texttt{atomically} joue aussi un rôle dans l'évaluation des signaux stricts. Ceux-ci ne sont en effet recalculés qu'une seule fois à la fin du bloc, mais avant l'invocation des observateurs. Une exception existe cependant: si l'état d'un signal strict est accédé explicitement à n'importe quel moment à l'intérieur du bloc, cet état sera calculé immédiatement.
+
+\textit{À ajouter: exemples}
+
+
+\subsection{Parallélisme}
+\textit{La question du parallélisme reste ouverte pour l'instant. Deux cas à considérer:}
+\begin{enumerate}
+	\item \emph{Utilisation multi-thread d'un unique graphe de signaux}: implique une gestion correcte de la concurrence afin de garantir un état cohérent du graphe en tout temps ainsi que d'éviter de potentiels inter-blocages lors du calcul parallèle de plusieurs branches du graphe. Il est aussi important de définir clairement la sémantique des observateurs dans le contexte multi-thread. Quel est le thread exécutant l'observateur? En cas de modification concurrente, combien d'appels à l'observateur? Une invocation unique une fois le graphe stabilisé entre tous les threads? Une invocation (exactement ou au plus ?) par thread?
+	\item \emph{Signaux comme mécanisme de parallélisation}: dans cette situation le graphe de signaux est considéré comme une fonction utilisée pour paralléliser automatiquement un traitement. Une source est définie pour chaque paramètre et des transformations de signaux sont utilisées pour réaliser les étapes intermédiaires de l'algorithme. Le résultat prend la forme d'un signal unique en bas de l'arbre de dépendances. Dans une telle configuration, le calcul des signaux indépendants peut être parallélisé de façon automatique (utilisation d'un thread pool géré par le framework?). L'ensemble peut alors être exposé sous la forme d'une fonction \texttt{(A, B, C, ...) => Future[Z]}. Utilisant un observateur sur le noeud final pour résoudre les futures retournés.
+	
+	Il est de plus intéressant de noter que si le premier cas d'utilisation parallèle est implémenté avec une sémantique \emph{exactly-once} cohérente au niveau des observateurs, le graphe utilisé par la fonction peut alors être utilisé par plusieurs thread simultanément et former un \emph{pipeline} de calcul dans lequel il est possible de débuter un nouveau calcul dès lors que l'ensemble des noeuds directement dépendant des signaux sources ont été évalués. Et ainsi de suite pour les signaux de niveau suivants. Allons-nous aller jusque là?
+\end{enumerate}
+
+\textit{Il n'est pas clair quels développements seront entrepris dans le domaine du parallélisme, l'implémentation actuelle est basée sur une approche single-thread adaptée à un usage dans le navigateur. L'intérêt pour ce projet étant plus sur au niveau de la propagation automatique des mises à jour que sur le parallélisme du calcul.}

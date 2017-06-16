@@ -1,7 +1,6 @@
 \section{Solutions existantes}
 
 \subsection{ReactiveX}
-
 Dans les implémentations les plus populaires de framework réactifs-fonctionnels, dont notamment la bibliothèque \emph{ReactiveX} disponible pour de nombreux langages, on retrouve généralement un concept similaire sous le nom de \texttt{Rx}.
 
 Bien que tous deux soient une abstraction du temps, les \texttt{Rx} représentent fondamentalement une séquence tandis qu'un \texttt{Signal} est une valeur unique à un instant donné. Afin de clarifier cette distinction, ces deux interfaces peuvent être comparées à leur équivalent non-réactif le plus proche dans la bibliothèque standard de Scala:
@@ -48,20 +47,18 @@ et produira des résultats radicalement différents selon l'abstraction utilisé
 
 La sémantique des signaux, basée sur les valeurs plutôt que la séquences de ces valeurs, a pour but d'être la plus adaptée possible à l'usage qui en est fait dans ce travail, c'est à dire la conception d'interfaces graphique.
 
-Une conséquence supplémentaire de cette différence entre signaux et \texttt{Rx} est la possibilité de définir aisément le concept de \emph{signal expression} dans le cas des signaux. Dans le cas des \texttt{Rx}, le comportement attendu d'une telle construction n'est pas évident dans une situation où les flux sont potentiellement finis. \textit{A PRECISER}
+Une conséquence supplémentaire de cette différence entre signaux et \texttt{Rx} est la possibilité de définir aisément le concept de \emph{signal expression} dans le cas des signaux. Dans le cas des \texttt{Rx}, le comportement attendu d'une telle construction n'est pas évident dans une situation où les flux sont potentiellement finis.
 
 \subsection{Scala.rx}
-
 Scala.rx est l'implémentation la plus proche des signaux utilisés dans ce projet. La simplicité d'utilisation est particulièrement appréciable avec la méthode de définition de \texttt{Rx}s sur la base d'expressions arbitraires.
 
 Les différences sont principalement liées aux limitations volontairement imposées dans Scala.rx.
 
 \subsubsection{Pas de variable réactive non-définie / vide}
-
 La raison invoquée est la difficulté d'intégrer l'absence de valeur de façon intuitive dans la syntaxe déclarative. Plus spécifiquement, l'auteur mentionne plusieurs solutions potentiels:
 \begin{enumerate}
 	\item Bloquer le thread courant jusqu'à ce qu'une valeur soit disponible. Cette solution n'est cependant pas envisageable pour une implémentation visant l'environnement Javascript.
-	\item Lancer une exception lors de l'accès à une variable vide, mais recommencer l'opération une fois que sa valeur sera définie. Cette option présente le désavantages que le calcul d'une variable réactive puisse potentiellement être démarré puis interrompu de multiples fois si de nombreuses dépendances sont indéfinies.
+	\item Lancer une exception lors de l'accès à une variable vide, mais recommencer l'opération une fois que sa valeur sera définie. Cette option présente le désavantage que le calcul d'une variable réactive puisse potentiellement être démarré puis interrompu de multiples fois si de nombreuses dépendances sont indéfinies.
 	\item Obliger le style monadique et retirer la méthode implicite de définition. Cette option n'est pas considérée pour des raisons d'expérience utilisateur évidentes.
 	\item Utiliser un plugin du compilateur pour transformer automatiquement le code en style monadique. Cette approche présente cependant de nombreux défis techniques et requiert une étape supplémentaire de configuration indésirable.
 \end{enumerate}
@@ -72,8 +69,7 @@ Une première approche est d'utiliser directement le type \texttt{Option} de Sca
 
 De plus, la seconde approche proposée (interrompre le calcul par une exception) ne semble pas déraisonnable et peut constituer une approche valide si correctement documentée. Il est important que les conséquences d'une variable indéfinie soient connues et considérées, mais leur absence volontaire semble au final plus gênante que bénéfique. Par ailleurs, le style monadique ne présente pas les inconvénients mentionnés et constitue une alternative valide si le style est plus adapté à un problème spécifique.
 
-\subsubsection{Complexité d'implémentation}
-
+\subsubsection{Complexité de l'implémentation}
 Malgré l'effort fourni pour proposer une interface simple et efficace, l'implémentation est en réalité relativement complexe et très largement basée sur l'utilisation de macros. Le code écrit par le développeur n'est pas le code finalement exécuté. Une raison probable de cette implémentation est basée sur la méthode choisie pour détecter automatiquement les dépendances entre variables réactives avec le style déclaratif.
 
 Dans Scala.rx, les expressions qui définissent des variables réactives sont réécrite sous formes de fonctions exploitant largement le système de paramètres implicites pour transmettre le contexte d'accès à une variable réactive entre parent et enfant. Bien que cela soit une approche très proche des standards en Scala, elle requiert une couche syntaxique supplémentaire ou l'utilisation de macros afin de l'ajouter automatiquement. Le système résultant est excessivement complexe et les erreurs rencontrées lors de l'usage ne sont pas intuitives puisqu'elles ne correspondent pas au code écrit. 
@@ -85,5 +81,4 @@ Une approche alternative est possible: \texttt{DynamicVariable}. Cette classe de
 Le code est ainsi fortement simplifié puisque la transmission du contexte est clairement dissociée, évitant la nécessité de modifier le code utilisateur et donc l'usage de macros au prix d'une architecture pouvant être considérée moins pure d'un point de vue fonctionnel. L'absence de macros permet également une compatibilité plus aisée avec les futures versions du langage.
 
 \subsubsection{Évaluation stricte}
-
-...
+\textit{Les \texttt{Rx}s de Scala.rx sont toujours évaluées de façon stricte. L'approche lazy des signaux de Xuen présente des avantages.}

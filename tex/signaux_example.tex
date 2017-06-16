@@ -1,1 +1,58 @@
 \section{Exemple d'utilisation}
+\textit{Cet exemple est la situation m'ayant initialement conduit à imaginer un système de propagation des changements puis à rechercher la programmation réactive-fonctionnelle.}
+
+\textit{Il s'agissait du développement d'un système d'optimisation pour un jeu vidéo utilisant la simulation d'une suite d'action afin d'en étudier les performances (méthode de Monte Carlo). Le personnage effectuant ces actions possède un ensemble d'attributs (force, endurance, chances de coups critique, etc.). Des effets temporaires peuvent temporairement affecter ces valeurs. Il a de plus un certain nombre de pièces d'équipement lui fournissant des bonus.}
+
+\textit{L'exemple est probablement trop complexe et les détails devraient être limités pour la version qui sera contenue dans le rapport final. Dans le code qui suit, seul l'attribut "force" est considéré. L'objectif est de calculer les dégâts d'une attaque basée sur l'état actuel du personnage (la fonction \texttt{computeAttackDamage()}).}
+
+\textit{À noter: implémentation très simple de toutes les fonctions malgré une interdépendance élevées des valeurs dans le calcul final.}
+
+\newpage
+\begin{lstlisting}
+case class GearItem(strength: Int)
+
+sealed trait Effect
+case class StrengthScore(amount: Int) extends Effect
+case class StrengthPercent(amount: Double) extends Effect
+case class DamageBonus(amount: Double) extends Effect
+
+class Player {
+	val baseStrength: Signal[Int] = Source(40)
+	
+	val gear: Signal[Set[GearItem]] = Source(Set(
+		GearItem(11) // Head
+		GearItem(23) // Chest
+	))
+	def equip(item: GearItem): Unit = { gear ~= (_ + item) }
+	def unequip(item: GearItem): Unit = { gear ~= (_ - item) }
+	
+	def gearStatAmount(extractor: GearItem => Int): Signal[Int] =
+		Signal {
+			(for (item <- gear.value) yield extractor(item)).sum
+		}
+	
+	val gearStrength: Signal[Int] = gearStatAmount(_.strength)
+	
+	val effects: Signal[Set[Effect]] = Source(Set.empty)
+	def gain(effect: Effect): Unit = { effects ~= (_ + effect) }
+	def lose(effect: Effect): Unit = { effects ~= (_ - effect) }
+	
+	def collect[T, U](matcher: PartialFunction[Effect, T])
+	                    (zero: U)(op: (U, T) => U): U = {
+		effects.value.collect(matcher).fold(zero)(op)
+	}
+	
+	val effectiveStrenght: Signal[Int] = Signal {
+		val fxS = collect({ case StrengthScore(a) => a })(0)(_ + _)
+		val fxP = collect({ case StrengthPercent(a) => a })(1.0)(_ * _)
+		((baseStrenght.value + gearStrenght.value + fxS) * fxP).toInt
+	}
+	
+	val bonusDamage: Signal[Double] = 
+		collect({ case DamageBonus(a) => a })(1.0)(_ * _)
+	
+	def computeAttackDamage(): Double =
+		effectiveStrength.value * 15 * bonusDamage.value
+}
+\end{lstlisting}
+

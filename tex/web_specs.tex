@@ -1,1 +1,38 @@
-\section{Spécifications}
+\section{Spécifications} \label{sec:web-specs}
+
+\textit{L'architecture du framework web est encore à un stade très primitif.}
+
+\subsection{Composant}
+\textit{Définition de nouveau composant. Un composant est défini par:}
+\begin{itemize}
+	\item \emph{Un sélecteur}: correspondant à la balise HTML qui sera définie pour ce composant. Ce nom doit comporter un tiret (selon la spécification \emph{Custom Elements}).
+	\item \emph{Un template}: une structure HTML pouvant contenir des expressions de data-binding avec des données réactives sous la forme de signaux
+	\item \emph{Une feuille de styles}: pouvant être utilisée pour définir l'apparence visuelle du composant
+	\item \emph{Un behavior}: comportement de l'élément en réponses aux interactions. Implémentées en tant que classe Scala.js.
+\end{itemize}
+
+\subsection{Template}
+\textit{Défini à partir de code HTML, il est parsé et compilé par le framework en un objet de type \texttt{Template} qui est alors utilisé pour chaque instance du composant.}
+
+\textit{L'opération de compilation ne s'effectue qu'une seule fois à la première utilisation du composant puis réutilisé. La forme compilée et optimisée pour la création de nombreuses instances du template.}
+
+\textit{Il y a donc un coût important lors de la première utilisation puis un coût minimal lors des utilisations futures, ce qui est cohérent avec l'utilisation des objets templates: définis une fois par composant, instantiés de nombreuses fois.}
+
+\textit{Le template peut contenir des expressions de data-bindings qui seront utilisée pour y inclure dynamiquement des données provenant de signaux réactif.}
+
+\subsection{Expressions}
+\textit{La syntaxe des expressions est fortement inspirée des expressions de Angular 2, sémantiquement adaptée pour correspondre à une usage combiné aux signaux.}
+
+\textit{Parser construit avec les "Parser Combinators" de Scala. Production d'un AST représentant l'expression puis optimisation de cet arbre.}
+
+\textit{De façon similaire aux templates: coût initial important puis faible coût lors de l'utilisation.}
+
+\textit{L'AST est passé à un interpréteur en même temps qu'une contexte d'évaluation spécifiant les variables globales à disposition est le composant dans lequel l'expression s'exécute.}
+
+\textit{Peut être une section à part entière}
+
+\subsection{Feuille de styles}
+\textit{Simple morceau de code CSS qui sera injecté dans le sous-arbre Shadow DOM correspondant au composant.}
+
+\subsection{Behavior}
+\textit{Définition d'une classe Scala qui étend \texttt{XuenBehavior}, qui étend lui même l'interface DOM \texttt{HTMLElement}.}
