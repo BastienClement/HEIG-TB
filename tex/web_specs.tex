@@ -2,25 +2,343 @@
 
 \textit{L'architecture du framework web est encore à un stade très primitif.}
 
-\subsection{Composant}
-\textit{Définition de nouveau composant. Un composant est défini par:}
+\subsubsection{Notation abrégée des packages}
+Dans la suite de cette section, afin de réduire la longueur des noms des packages, une notation abrégée est utilisée à la place du nom complet d'une classe:
 \begin{itemize}
-	\item \emph{Un sélecteur}: correspondant à la balise HTML qui sera définie pour ce composant. Ce nom doit comporter un tiret (selon la spécification \emph{Custom Elements}).
-	\item \emph{Un template}: une structure HTML pouvant contenir des expressions de data-binding avec des données réactives sous la forme de signaux
-	\item \emph{Une feuille de styles}: pouvant être utilisée pour définir l'apparence visuelle du composant
-	\item \emph{Un behavior}: comportement de l'élément en réponses aux interactions. Implémentées en tant que classe Scala.js.
+	\item Le prefix \texttt{xuen} est abrégé en \texttt{x}.
+	\item De façon similaire, le second niveau est abrégé en une seule lettre.
+	\begin{itemize}
+		\item \texttt{component} devient \texttt{c},
+		\item \texttt{expression} devient \texttt{e},
+		\item \texttt{template} devient \texttt{t},
+		\item etc.
+	\end{itemize}
+\end{itemize}
+Ainsi, par exemple, la classe \texttt{xuen.component.Element} est référencée par \texttt{x.c.Element}.
+
+\subsection{Composant} \label{sec:web-usage-component}
+
+Un composant est la brique essentiel de construction d'une application. Il correspond directement à une définition d'un \emph{custom element}. Une fois défini, un composant peut être instancié un nombre quelconque de fois, selon les besoins de l'application.
+
+Un composant est défini à partir de:
+\begin{itemize}
+	\item Un sélecteur: correspondant à la balise HTML qui sera définie pour ce composant. Ce nom doit comporter un tiret (selon la spécification \emph{Custom Elements})
+	\item Une implémentation: une sous-classe de \texttt{x.c.Element}, définissant le comportement des instances de ce composant
+\end{itemize}
+Optionnellement, un composant peut également posséder:
+\begin{itemize}
+	\item Un template: une structure HTML pouvant contenir des expressions de \emph{data-binding} avec des données réactives sous la forme de signaux, ce template sera matérialisé pour chaque instance du composant 
+	\item Une feuille de styles: pouvant être utilisée pour définir l'apparence visuelle du composant
+	\item Une liste de dépendances: une liste d'autres composants devant être chargés avant ce composant, cette liste correspond à d'autres composants utilisés dans le template de ce composant.
 \end{itemize}
 
+\subsubsection{Déclaration}
+En pratique, un composant est créé en déclarant un \texttt{object} qui étend la classe \texttt{x.c.Component}. La classe correspondant à l'implémentation du composant est généralement déclarée simultanément avec le même nom, formant ainsi une paire (classe, objet compagnon) fréquent en Scala.
+
+\begin{lstlisting}
+import xuen.component._
+
+class HelloWorld extends Element(HelloWorld)
+
+object HelloWorld extends Component[HelloWorld](
+	selector = "hello-world",
+	template = html"""
+		Hello, world!
+	""",
+	stylesheet = css"""
+		:host { color: blue; }
+	"""
+)
+\end{lstlisting}
+
+Ce court exemple illustre déjà la plupart des concepts utilisés dans la construction de composants Xuen.
+
+\subsubsection{Interpolateurs \texttt{html} et \texttt{css}}
+
+Lors de la définition du template et de la feuille de style d'un composant, les interpolateurs \texttt{html} et \texttt{css} sont généralement utilisés. Ils sont une façon simple d'obtenir les objets de type \texttt{Template} et \texttt{Stylesheet} attendu par le constructeur de \texttt{Component} à partir de code source HTML ou CSS.
+
+Ces interpolateurs sont définis par la classe \texttt{x.c.Interpolations}. En Scala, l'implémentation de tels interpolateurs repose sur l'utilisation de conversions implicites qui ne sont généralement pas identifiées automatiquement par l'IDE. Il est ainsi nécessaire d'importer cette classe manuellement afin de les utiliser. Alternativement, il est possible d'importer l'ensemble du package \texttt{xuen.component} en utilisant une importation \texttt{wildcard}.
+\begin{lstlisting}
+import xuen.component._
+\end{lstlisting}
+Cette méthode est généralement préférée à l'importation explicite.
+
+Le nom d'interpolateur est trompeur: contrairement à l'interpolateur \texttt{s} de la bibliothèque Scala, \texttt{html} et \texttt{css} ne supporte pas l'insertion de fragments à l'aide du symbole spécial \texttt{\$}. Ils sont cependant une façon concise d'appliquer un traitement à une chaîne de caractères, en l'occurrence la transformation en instance de \texttt{Template} ou \texttt{Stylesheet}. Ils sont également l'occasion pour l'IDE d'identifier le langage utilisé dans la chaîne de caractères et ainsi offrir une coloration syntaxique et une auto-complétion appropriée.
+
+Dans le cas d'IntelliJ IDEA, il est possible d'associer des langages arbitraires avec un interpolateur. Il est ainsi possible d'associer l'interpolateur \texttt{html} avec le langage HTML, de même pour \texttt{css} avec CSS. Dès lors, le code du template ou de la feuille de style sera correctement traité comme HTML ou CSS dans l'éditeur.
+
+\subsubsection{Enregistrement et instantiation}
+
+L'enregistrement du composant en tant que \emph{custom element} au niveau du navigateur se fait automatiquement lors de la construction de l'objet singleton \texttt{x.c.Component} de ce composant.
+
+En Scala, la construction d'un \texttt{object} est différée jusqu'à la première référence de cet élément dans le code source, de façon similaire à l'initialisation d'une \texttt{lazy val}. La simple présence de la définition dans le code source n'est donc pas suffisante pour que ce composant soit enregistré. La méthode par laquelle le composant est instancié est alors importante.
+
+Un composant peut être instancié de 4 façons différentes:
+\begin{enumerate}
+	\item Par l'utilisation du constructeur de son implémentation:
+	\begin{lstlisting}
+val element = new HelloWorld
+	\end{lstlisting}
+	\item En utilisant la méthode \texttt{instantiate} de \texttt{Component}:
+	\begin{lstlisting}
+val element = HelloWorld.instantiate()
+	\end{lstlisting}
+	\item En utilisant la méthode \texttt{createElement} de \texttt{Document}:
+	\begin{lstlisting}
+val element = dom.document.createElement("hello-world")
+	\end{lstlisting}
+	\item Implicitement par le parser HTML:
+	\begin{lstlisting}
+val div = dom.document.createElement("div")
+div.innerHTML = "<hello-world></hello-world>"
+	\end{lstlisting}
+\end{enumerate}
+
+Dans les deux premiers cas, l'objet \texttt{Component} est référencé directement ou indirectement et il n'est pas nécessaire de se préoccuper de l'enregistrement. Ce sont les méthodes préférées lorsque le composant est instancié par le code du développeur et non le navigateur lui-même.
+
+Les deux autre méthodes se basent sur l'API native du navigateur et ne référencent à aucun moment l'objet \texttt{Component}. Ces méthodes n'enregistrent ainsi pas le composant au niveau du navigateur. Dans une telle situation, la fonction \texttt{Component.register} peut être utilisée pour forcer une référence vers l'objet \texttt{Component}. Un nombre arbitraire de composant peuvent être passés à \texttt{register}.
+\begin{lstlisting}
+Component.register(HelloWorld, AnotherComponent, ...)
+\end{lstlisting}
+
+Dans le cas des composants utilisés dans le template d'un autre composant, ces composants doivent être explicitement spécifiés dans la liste de dépendances du composant de premier niveau. Ainsi, référencer l'objet \texttt{Component} de niveau supérieur référencera également tous les composants des niveaux inférieurs et les enregistrement seront correctement effectués.
+\begin{lstlisting}
+object HelloWorld extends Component[HelloWorld](
+	...,
+	dependencies = List(One, Two, Three)
+)
+\end{lstlisting}
+
+\subsection{Element}
+
+La définition du comportement d'un composant se fait par la définition d'une sous-classe de \texttt{x.c.Element} qui est ensuite passée au constructeur de \texttt{Component} (§ \ref{sec:web-usage-component}). Chaque instance du composant sera alors une instance de cette classe.
+
+Un élément hérite de tous les éléments nécessaires à la définition d'un comportement de composant par le biais de la classe \texttt{x.c.Element}. Le seul paramètre restant à spécifier est le composant qui est implémenté par cet élément, ce qui est effectué par la paramètre passé au constructeur de \texttt{Element}.
+\begin{lstlisting}
+class HelloWorld extends Element(component = HelloWorld)
+\end{lstlisting}
+
+La déclaration ci-dessus est donc suffisante pour la définition d'un comportement de composant valide. La classe \texttt{Element} offre de nombreux outils aux instances de ses sous-classes.
+
+\subsubsection{Interface \texttt{HTMLElement}}
+\texttt{Element} hérite de l'interface \texttt{HTMLElement}, définie par le navigateur et les standards web. Cette interface hérite à son tour d'un ensemble d'autres interfaces tels que \texttt{dom.Element}\footnote{La spécification DOM défini également une interface \texttt{Element}, à distinguer de la classe abstraite \texttt{xuen.component.Element} qui est une implémentation spécifique de cette interface. En pratique, l'interface \texttt{x.c.Element} est rarement utilisée par le code utilisateur, et l'interface DOM est généralement utilisée en tant que \texttt{dom.Element} en Scala.js}, \texttt{dom.Node}, \texttt{EventTarget}.
+
+Une instance de \texttt{Element} possède donc les méthodes et attributs usuels des éléments HTML, tel que par exemple \texttt{style}, \texttt{parentNode}, \texttt{querySelector} ou \texttt{addEventListener}. C'est aussi un argument valide pour les méthodes de manipulation du DOM tel que \texttt{appendChild} ou \texttt{replaceChild}.
+
+\subsubsection{ShadowRoot}
+Xuen se base sur les mécanismes du \emph{Shadow DOM} pour implémenter templates et feuilles de styles. Chaque instance d'un composant est ainsi associée à un sous-arbre Shadow DOM, accessible depuis l'attribut \texttt{shadow} définie par la classe \texttt{Element}.
+
+Cet attribut est similaire à l'attribut \texttt{shadowRoot} définie par la spécification Shadow DOM à la différence que \texttt{shadow} est garanti d'être non-nul. Un sous-arbre Shadow DOM est automatiquement construit lors de l'accès à l'attribut si celui-ci n'existe pas. Un sous-arbre Shadow DOM est également automatiquement construit si le composant a défini un template ou une feuille de style et sera initialement peuplé par les éléments correspondants.
+
+Il est généralement déconseillé de manipuler le sous-arbre Shadow DOM manuellement. Ceci est en général effectué de façon déclarative à partir du template. Il peut cependant être nécessaire d'accéder à l'instance d'un élément présent dans le sous arbre à partir de l'implémentation du composant. Dans une telle situation \texttt{querySelector} peut être utilisé à partir de \texttt{shadow} pour accéder aux éléments du sous-arbre.
+
+\begin{lstlisting}
+class HelloWorld extends Element(HelloWorld) {
+	private val span = shadow.querySelector("span")
+	span.addEventListener("click", ...)
+}
+
+object HelloWorld extends Component[HelloWorld](
+	selector = "hello-world",
+	template = html"""Hello, <span>world</span>!"""
+)
+\end{lstlisting}
+
+À noter que, conformément à la spécification Shadow DOM, invoquer la méthode \texttt{querySelector} directement sur l'instance \texttt{Element} ne permet pas d'accéder aux éléments du sous-arbre Shadow DOM, uniquement aux enfants hors du sous-arbre caché, appelé \emph{light DOM}.
+
+\begin{lstlisting}
+// Instancié à partir de :
+// <hello-world><span>a</span></hello-world>
+
+class HelloWorld extends Element(HelloWorld) {
+	private val a = this.querySelector("span")
+	private val b = this.shadow.querySelector("span")
+	assert(a.textContent == "a")
+	assert(b.textContent == "b")
+}
+
+object HelloWorld extends Component[HelloWorld](
+	selector = "hello-world",
+	template = html"""<span>b</span>"""
+)
+\end{lstlisting}
+
+\subsubsection{Attributs}
+Les attributs jouent un rôle similaire aux arguments de constructeur en HTML, ils sont un mécanisme permettant de passer des paramètres à un élément afin de configurer son comportement.
+
+Un élément Xuen peut définir un ensemble de paramètre auxquels il souhaite avoir accès sous forme d'un signal \texttt{Source}. La valeur de l'attribut sera reflétée dans le signal correspondant. Cette association est \emph{live}, c'est à dire que l'attribut sera automatiquement observé et la valeur du signal sera mise à jour si un événement externe venait à modifier sa valeur. Inversement, un changement de la valeur de la source entraînera automatiquement une mise à jour de l'attribut HTML correspondant.
+
+Un \emph{binding} d'attribut est déclaré en utilisant la méthode \texttt{attribute[T]}, produisant un \texttt{Source} de type \texttt{T} pour l'attribut. Le nom de l'attribut est automatiquement déterminé en fonction du nom de la variable à laquelle cette source est associée.
+
+\begin{lstlisting}
+class HelloWorld extends Element(HelloWorld) {
+	val foo = attribute[String]
+	// Association avec l'attribute `foo`
+}
+\end{lstlisting}
+
+Si la détection automatique ne parvient pas à identifier automatiquement le nom de l'attribut en question, une erreur sera générée à la compilation. Il est alors possible de spécifier explicitement le nom de l'attribut. Ceci permet également d'associer un nom différent à la source et à l'attribut manipulé.
+
+\begin{lstlisting}
+class HelloWorld extends Element(HelloWorld) {
+	val bar = attribute[String]("foo")
+}
+\end{lstlisting}
+
+La valeur d'un attribut d'un élément HTML est toujours une chaîne de caractères. Un \emph{binding} d'attribut effectue automatiquement une sérialisation ou désérialisation entre la valeur effective de l'attribut de type \texttt{String} et le type \texttt{T} utilisé par le signal.
+
+Cette opération nécessite qu'une instance du trait \texttt{x.c.AttributeFormat[T]} soit implicitement disponible pour le type \texttt{T} en question. Par défaut, les types \texttt{String}, \texttt{Boolean}, \texttt{Char}, \texttt{Byte}, \texttt{Short}, \texttt{Int}, \texttt{Long}, \texttt{Float} et \texttt{Double} peuvent être utilisés pour un attribut.
+
+\subsubsection{Propriétés}
+Les propriétés sont une alternative aux attributs qui ne dépendent pas de \texttt{AttributFormat} et peuvent donc être utilisés pour passer n'importe quel type de paramètre à un élément Xuen. 
+
+\begin{lstlisting}
+class HelloWorld extends Element(HelloWorld) {
+	val foo = property[Map[Int, String]]
+}
+\end{lstlisting}
+
+En pratique, une déclaration \texttt{property[T]} correspond à la construction d'une \texttt{Source.undefined[T]}. Cependant, l'usage de \texttt{property} souligne l'usage attendu de la source en tant que paramètre de l'élément.
+
+\subsubsection{Événements personnalisés}
+
+\textit{Méthodes simplifiée pour le traitement d'événement personnalisés dans un Element.}
+
+\subsubsection{Événements \texttt{xuen:connected} et \texttt{xuen:disconnected}}
+
+\textit{Custom events lors de la connexion / déconnexion d'un élément}
+
 \subsection{Template}
-\textit{Défini à partir de code HTML, il est parsé et compilé par le framework en un objet de type \texttt{Template} qui est alors utilisé pour chaque instance du composant.}
 
-\textit{L'opération de compilation ne s'effectue qu'une seule fois à la première utilisation du composant puis réutilisé. La forme compilée et optimisée pour la création de nombreuses instances du template.}
+Un template est une structure de noeuds DOM qui sont automatiquement insérés dans le sous-arbre Shadow DOM d'un composant lorsque celui-ci est instancié. Cette structure est généralement définie à partir du code source HTML correspondant et l'interpolateur \texttt{html}, en paramètre au constructeur de \texttt{Component}.
 
-\textit{Il y a donc un coût important lors de la première utilisation puis un coût minimal lors des utilisations futures, ce qui est cohérent avec l'utilisation des objets templates: définis une fois par composant, instantiés de nombreuses fois.}
+Cette structure est \emph{compilée} lors de la création de l'objet correspondant \texttt{Template}. Le compilateur va ainsi parcourir récursivement la structure originale afin d'identifier des annotations de \emph{data-binding} associant des comportements particuliers à certains noeuds de l'arbre.
 
-\textit{Le template peut contenir des expressions de data-bindings qui seront utilisée pour y inclure dynamiquement des données provenant de signaux réactif.}
+Ces annotations sont fortement inspirées de la syntaxe utilisée par le framework \emph{Angular 2} et prennent la forme d'attributs particuliers placés sur les éléments du template. La comportement exact de ces annotations est spécifié par l'\emph{expression} utilisée comme valeur de l'attribut. La section \ref{sec:web-usage-expr} détail spécifiquement la syntaxe des expressions. Cette section se concentre sur les annotations disponibles.
 
-\subsection{Expressions}
+\subsubsection{Interpolation}
+Les noeuds \texttt{Text} et les attributs d'éléments présents dans le template peuvent contenir des marqueurs d'interpolation \texttt{\{\{ \}\}}. L'expression contenue dans la double-paire d'accolade sera évaluée puis convertie en \texttt{String} avant d'être insérée à la place du marqueur dans le texte final.
+
+\begin{lstlisting}[language=HTML]
+<div>2 + 2 = {{ 2 + 2 }}</div>
+--> <div>2 + 2 = 4</div>
+
+<canvas width="720" height="{{9/16 * 720}}"></canvas>
+--> <canvas width="720" height="405"></canvas>
+\end{lstlisting}
+
+Une expression d'interpolation ne peut jamais échouer, les cas de valeurs \texttt{null} et \texttt{undefined} sont explicitement gérés en retournant le texte correspondant. Dans tous les autres cas, la méthode \texttt{toString} est utilisée pour produire la valeur finale.
+
+Il n'est pas possible de placer une interpolation dans un attribut dont le contenu est déjà interprété comme une expression. C'est par exemple le cas des attributs qui sont des annotations de \emph{data-binding}. Il n'est pas non plus possible d'emboîter une interpolation dans une autre.
+
+\subsubsection{Annotation d'identifiant}
+Un attribut dont le nom débute par \texttt{\#} est traité comme une annotation d'identifiant, spécifiant la valeur de l'attribut \texttt{id} de l'élément. Cette simple annotation est principalement un sucre syntaxique et la valeur de l'attribut, si elle est spécifiée, est ignorée.
+
+\begin{lstlisting}[language=HTML]
+<div #foo></div>
+--> <div id="foo"></div>
+\end{lstlisting}
+
+\subsubsection{Annotation de classe}
+Un attribut dont le nom commence par \texttt{.} est traité comme une annotation de classe. Si aucune valeur n'est fournie pour cet attribut, la classe est inconditionnellement ajoutée aux classes de l'élément.
+
+Si une valeur est fournie pour cet attribut, celle-ci évaluée en tant qu'expression booléenne. Si la valeur évaluée est \texttt{true}, la classe est ajoutée à la liste de classes de l'élément. Dans le contraire, la classe est retirée de l'élément. Si cette expression utilise des signaux, ce comportement est dynamique et la classe correspondante sera ajoutée ou retirée au fil du temps.
+
+\begin{lstlisting}[language=HTML]
+<div .foo .bar="true" .baz="false"></div>
+--> <div class="foo bar"></div>
+\end{lstlisting}
+
+\subsubsection{Annotation de propriété}
+Un attribut dont le nom commence par \texttt{[} et se termine par \texttt{]} est traité comme une annotation d'attribut.
+
+La valeur de l'attribut est évaluée en tant qu'expression et la valeur obtenue est utilisée pour mettre à jour la propriété correspondante de l'élément. Si cette propriété est une \texttt{Source}, la valeur de la source est modifiée à la place.
+
+\begin{lstlisting}[language=HTML]
+<input type="text" [value]="2 + 2">
+--> <input type="text"> == $0
+--> $0.value == "4"
+\end{lstlisting}
+
+Il est important de souligner que ce type d'annotation n'affecte pas les \emph{attributs} de l'élément mais bien les \emph{propriétés} de l'objet JavaScript correspondant. C'est pourquoi dans l'exemple ci-dessus il n'y a pas d'attribut \texttt{value} présent sur l'élément \texttt{<input>}, mais \texttt{\$0.value} retourne effectivement la chaîne de caractères \texttt{"4"}\footnote{La notation \texttt{\$0} est inspirée de l'inspecteur web de Google Chrome, dans lequel la variable \texttt{\$0} fait référence à l'élément actuellement sélectionner dans l'inspecteur DOM.}.
+
+Si aucune valeur n'est fournie pour l'annotation de propriété, la nom de la propriété est utilisée comme expression. Ainsi, une annotation \texttt{[foo]} est traitée en tant que \texttt{[foo]="foo"}, offrant ainsi une syntaxe raccourcie dans le cas où une propriété d'un élément parent est passée tel quel à une propriété du même nom dans un élément enfant.
+
+\subsubsection{Annotation d'événement}
+
+Un attribut dont le nom commence par \texttt{(} et se termine par \texttt{)} est traité comme une annotation d'événement.
+
+La valeur de l'attribut sera évaluée à chaque fois que l'événement correspondant sera \emph{dispatché} à partir de l'élément. À l'intérieur de cette expression, la variable \texttt{event} fait référence à l'instance de l'événement émis. Il est interdit de ne pas spécifier de valeur pour une annotation d'événement.
+
+\begin{lstlisting}[language=HTML]
+<input type="text" (input)="doSomethingWith(event.target.value)">
+\end{lstlisting}
+
+Les événements sont écoutés sur l'élément annoté, et du point de vue de l'élément parent. En d'autre termes, le gestionnaire d'événement est attaché à l'élément lui-même, il n'y a donc pas besoin que l'élément se propage dans l'arbre DOM pour être reçu. En revanche, si l'élément provient du sous-arbre Shadow DOM de l'élément, il est possible qu'il ne traverse pas la barrière du Shadow DOM et soit ainsi invisible à partir de l'élément parent.
+
+Un certains nombre d'événements traversent naturellement la barrière du Shadow DOM, c'est la cas par exemple de \texttt{click}, \texttt{input} ou \texttt{mousemove}. D'autres, comme par exemple tous les événements personnalisés, sont par défaut encapsulés dans le sous-arbre et invisibles de l'extérieur de l'élément. Un tel événement ne pourra être capturé par cette annotation. Dans le cas d'un événement personnalisé, il est nécessaire que le flag \texttt{composed} soit défini à \texttt{true} lors de la création de l'événement.
+
+\subsubsection{Transformation \texttt{*if}}
+Une transformation est une annotation qui modifie dynamiquement la structure du DOM à partir d'expressions.
+
+La transformation \texttt{*if} évalue sa valeur en tant qu'expression booléenne. Si la valeur obtenue est \texttt{true}, l'élément est inséré dans l'arbre DOM. Si la valeur est \texttt{false}, l'élément est retiré de l'arbre et un commentaire est inséré à la place en tant que \emph{placeholder}.
+
+\begin{lstlisting}[language=HTML]
+<div> <div *if="true"></div> </div>
+--> <div> <div></div> </div>
+
+<div> <div *if="false"></div> </div>
+--> <div> <!-- *if false --> </div>
+\end{lstlisting}
+
+\subsubsection{Transformation \texttt{*for}}
+La valeur de la transformation \texttt{*for} doit être un \texttt{énumérateur}, une expression particulière définissant les différentes propriétés de l'itération. Pour chaque élément de l'énumérateur, l'élément sera dupliqué et inséré dans l'arbre DOM.
+
+À l'intérieur d'un élément annoté avec \texttt{*for}, les variables déclarées par l'énumérateur sont accessibles et correspondent à la valeur courante de l'itération. Il est également possible d'utiliser ces variables pour d'autres annotations présentes sur l'élément, les transformations étant appliquées avant les annotations.
+
+\begin{lstlisting}[language=HTML]
+<ul> <li *for="i of [1, 2, 3]">{{i}}</li> </ul>
+--> <ul> <li>1</li> <li>2</li> <li>3</li> </ul>
+\end{lstlisting}
+
+\subsubsection{Précédence des transformations}
+Si les transformation \texttt{*if} et \texttt{*for} sont simultanément présentes sur un élément, la transformation \texttt{*if} est appliquée en premier, suivi de la transformation \texttt{*for}.
+
+L'objectif est d'offrir un mécanisme permettant la désactivation conditionnelle de l'ensemble de l'itération, en traitant \texttt{*if} avant \texttt{*for}, plutôt que l'élision d'un élément particulier de l'itération, ce qui se produirait si \texttt{*for} était évalué avant \texttt{*if}. En effet la clause de filtrage \texttt{if} de l'énumérateur offre déjà ce mécanisme.
+
+\subsubsection{Utilisation combinée des transformations avec \texttt{<template>}}
+Du fait de la syntaxe du langage HTML, il n'est possible d'appliquer une annotation que sur un élément, et non un noeud DOM quelconque. Il n'est par exemple pas possible d'annoter un noeud \texttt{Text}.
+
+Dans le cas des annotations basiques, cela n'a généralement pas d'importance, un noeud \texttt{Text} ne possède de toutes façons pas d'attribut \texttt{id}, \texttt{class} ou de propriétés particulières. Il n'émet pas non plus d'événements. Cependant, dans le cas des annotations de transformations, l'impossibilité d'annoter un noeud \texttt{Text} peut se révéler gênant.
+
+\begin{lstlisting}[language=HTML]
+<div><span>...</span> ??*if="..."??text <span>...</span></div>
+--> Nothing to put the `*if` on ?!
+\end{lstlisting}
+
+Au autre situation problématique est l'annotation simultanée de plusieurs éléments. Comment faire lorsque une transformation \texttt{*for} doit produire deux éléments DOM pour chaque élément de l'itération ? Dans l'exemple ci-dessous, chaque \emph{checkbox} est associée à un label.
+
+\begin{lstlisting}[language=HTML]
+<input *for="i of [1, 2]" type="checkbox" [value]="i">
+<span *for="i of [1, 2]">{{i}}</span>
+\end{lstlisting}
+
+Cet exemple produit une liste de 3 \emph{checkboxes} puis 3 labels, certainement pas le résultat escompté.
+
+Une solution serait d'encapsuler les noeuds à annoter dans une élément neutre tel que \texttt{<div>} ou \texttt{<span>} et d'annoter cet élément. Cette solution est relativement simple et est généralement la méthode préférée dans ce genre de situation.
+
+Cependant, l'ajout d'un élément supplémentaire peut avoir des effets secondaires indésirables, par exemple au niveau des sélecteurs CSS. Dans le cas d'une itération, ceci n'est pas toujours possible. Dans ces situations, il est possible d'utiliser un élément \texttt{<template>} afin d'encapsuler un nombre quelconque de sous-noeuds DOM.
+
+\begin{lstlisting}[language=HTML]
+<template *for="i of [1, 2]">
+	<input type="checkbox" [value]="i">
+	<span>{{i}}</span>
+</template>
+\end{lstlisting}
+
+Lorsqu'une transformation est appliquée sur un élément \texttt{<template>}, cet élément est supprimé du sous-arbre DOM produit par la transformation et seul son contenu est inséré. Il se substitue ainsi à l'élément encapsulant mentionné précédemment et disparait totalement lors de l'application de la transformation.
+
+\subsection{Expressions} \label{sec:web-usage-expr}
 \textit{La syntaxe des expressions est fortement inspirée des expressions de Angular 2, sémantiquement adaptée pour correspondre à une usage combiné aux signaux.}
 
 \textit{Parser construit avec les "Parser Combinators" de Scala. Production d'un AST représentant l'expression puis optimisation de cet arbre.}
@@ -34,5 +352,4 @@
 \subsection{Feuille de styles}
 \textit{Simple morceau de code CSS qui sera injecté dans le sous-arbre Shadow DOM correspondant au composant.}
 
-\subsection{Behavior}
-\textit{Définition d'une classe Scala qui étend \texttt{XuenBehavior}, qui étend lui même l'interface DOM \texttt{HTMLElement}.}
+\subsection{Router}
