@@ -1,8 +1,5 @@
 @startuml
-
-!define TRAIT (T, #B6DDA7)
-!define CLASS (C, #B9D2E2)
-!define OBJECT (O, #ECC585)
+!include prelude.iuml
 
 'skinparam defaultFontName Consolas
 
@@ -27,10 +24,10 @@ interface Child <<TRAIT>> extends Mutable
 
 abstract class Expression <<CLASS>> extends Child
 
-interface Strict <<TRAIT>> extends Child
+interface Deferred <<TRAIT>> extends Child
 interface Lazy <<TRAIT>> extends Child
 
-class StrictExpression <<CLASS>> extends Expression, Strict
+class DeferredExpression <<CLASS>> extends Expression, Deferred
 class LazyExpression <<CLASS>> extends Expression, Lazy
 
 

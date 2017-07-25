@@ -5,6 +5,22 @@
 
 \textit{Développement spécifiquement pour Scala.js. Il existe de nombreux bindings par exemple pour React ou Angular en Scala.js, mais l'utilisation d'un framework conçu pour JavaScript en Scala.js n'est pas toujours l'expérience la plus agréable. Volonté de disposer d'une API conçue pour le langage Scala.}
 
+\textit{Transition signaux -> component (via template et data binding)}
+
+\section{À propos des standards Web Components}
+
+L'implémentation de la partie web de Xuen dépend extensivement des mécanismes introduits par les spécifications \emph{Shadow DOM} \cite{w3c-shadowdom}, \emph{Custom Elements} \cite{w3c-custom-elements} et les spécifications annexes telles que \emph{CSS Scoping} \cite{w3c-css-scopings}.
+
+Ces standards définissent des mécanismes permettant la définition de nouveaux éléments personnalisés, encapsulés et réutilisables. Ils définissent également comment l'encapsulation du composant est implémentée au niveau des styles CSS et des événements DOM. Ces mécanismes sont réutilisés avec le minimum d'abstraction lorsque cela est possible pour Xuen.
+
+Définir un élément Xuen (§ \ref{sec:web-specs-element}) correspond à la définition d'un nouvel élément \emph{Custom Elements}: la classe produite est passée à la méthode native \texttt{define()} du navigateur tel que le serait une classe construite directement en JavaScript.
+
+Les templates se basent sur \emph{Shadow DOM} comme mécanisme d'encapsulation. Ils peuvent ainsi réutiliser le concept de \texttt{<slot>} introduit par ce standard comme primitive de composition. L'encapsulation standard des événements et des styles s'applique également.
+
+Ces concepts sont répartis entre une multitude de spécifications, provenant de différentes organisations et peuvent être difficiles à aborder de prime abord. Néanmoins, une connaissance des ces mécanismes peut se révéler très utile à la compréhension de l'implémentation et du fonctionnement de Xuen.
+
+En guise d'introduction, le guide \emph{Shadow DOM v1: Self-Contained Web Components} \cite{google-shadowdom} rédigé par Google dans la série \emph{Web Fundamentals} est un bon tour d'horizon des mécanismes liés à Shadow DOM.
+
 \input{tex/web_specs}
 \input{tex/web_prior}
 \input{tex/web_impl}

@@ -1,0 +1,85 @@
+\chapter{Grammaire des expressions}
+
+Cette section décrit la grammaire des expressions utilisées dans les templates Xuen. La syntaxe utilisée correspond à la syntaxe définie par le W3C pour la description de XML \cite{xml-ebnf}. Les notations \texttt{?}, \texttt{+} et \texttt{*}, indiquent respectivement \emph{0-1}, \emph{1-*} ou \emph{0-*} répétitions, de façon similaire à leur signification dans les expressions régulières.
+
+La grammaire ci-dessous inclue simultanément les éléments décomposés entre le \emph{lexer} et le \emph{parser} au niveau de l'implémentation. Les productions notées \texttt{/.../} correspondent à une expression régulière et sont en principe une règles implémentée au niveau du \emph{lexer}.
+
+\subsubsection{Grammaire}
+\begin{lstlisting}
+expression ::= <empty> | chain
+
+enumerator ::=
+	( identifier "," )? identifier "of" simpleExpr
+	( "by" simpleExpr )? ( "if" simpleExpr )? ( "with" chain )?
+
+identifier ::= /[a-zA-Z_$][a-zA-Z0-9_$]*/
+
+chain ::= ";"* pipe ( ";"+ ( <empty> | pipe ) )*
+
+pipe ::= simpleExpr ( "|" identifier ( ":" simpleExpr )* )*
+
+simpleExpr ::= conditional
+
+conditional ::= logicalOr ( "?" conditional ":" conditional )?
+
+logicalOr ::= logicalAnd ( "&&" logicalAnd )*
+
+logicalAnd ::= equality ( "||" equality )*
+
+equality ::=
+	relational ( ( "==" | "!=" | "===" | "!==" ) relational )*
+
+relational ::= range ( ( "<" | ">" | "<=" | ">=" ) range )*
+
+range ::= additive ( "to" additive ( "by" additive )? )?
+
+additive ::= multiplicative ( ( "+" | "-" ) multiplicative )*
+
+multiplicative ::= prefix ( ( "*" | "/" | "%" ) prefix )*
+
+prefix ::= ( "+" | "-" | "!" )* secondary
+
+secondary ::= primary secondaryAccess*
+
+secondaryAccess ::= memberAccess | bracketAccess | functionCall
+memberAccess ::= unsafeMember | safeMember
+unsafeMember ::= "." ( memberWrite | memberRead )
+safeMember ::= "?." memberRead
+memberWrite ::= identifier "=" simpleExpr
+memberRead ::= identifier
+
+bracketAccess ::= "[" simpleExpr "]" ( "=" simpleExpr )?
+
+functionCall ::= "(" callArguments ")"
+
+callArguments ::= ( simpleExpression ( "," simpleExpression )* )?
+
+primary ::= parentheses | selector | literal | reference
+
+parentheses ::= "(" chain ")"
+
+selector ::= simpleSelector | complexSelector
+simpleSelector ::= /#[a-zA-Z0-9_\-]+/
+complexSelector ::= /@\([^)]+\)/
+
+literal ::= keywordLiteral | numberLiteral | stringLiteral | arrayLiteral | objectLiteral
+
+keywordLiteral ::= "undefined" | "null" | "false" | "true"
+
+numberLiteral ::= hexInteger | octInteger | binInteger | decNumber
+hexInteger ::= /0[xX][0-9a-fA-F]+/
+octInteger ::= /0[oO][0-7]+/
+binInteger ::= /0[bB][01]+/
+decNumber ::= /((0|[1-9][0-9]*)(\.[0-9]+)?|\.[0-9]+)([eE][+\-]?[0-9]+)?/
+
+stringLiteral ::=
+	/:"[^"\\]*(?:\\[\s\S][^"\\]*)*"/ | /'[^'\\]*(?:\\[\s\S][^'\\]*)*'/
+
+arrayLiteral ::=
+	"[" (simpleExpression ( "," simpleExpression )* )? "]"
+
+objectLiteral ::= "{" ( objectEntry ( "," objectEntry )* )? "}"
+objectEntry ::= objectKey ":" simpleExpr
+objectKey ::= identifier | stringLiteral | dynamicKey
+dynamicKey ::= "[" simpleExpr "]"
+\end{lstlisting}

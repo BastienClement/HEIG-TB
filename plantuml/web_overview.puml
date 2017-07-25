@@ -1,0 +1,55 @@
+@startuml
+!include prelude.iuml
+
+rectangle "Navigateur" {
+	(CE Registry)
+	(CE Registry) .. (Parser)
+	(CE Registry) .. (DOM)
+}
+
+rectangle "Xuen" {
+
+	rectangle "Frontend" {
+		(Element)
+		(Component)
+		(Template)
+		(Stylesheet)
+	}
+
+	rectangle "Backend" {
+		(Context)
+		(Interpreter)
+		(Instance)
+		(Expression)
+		(Behavior)
+	}
+
+	rectangle "Compiler" {
+		(Optimizer)
+		(Expression Compiler)
+		(Template Compiler)
+	}
+
+	Element --> Component
+	Component --> Template
+	Component --> Stylesheet
+	Element --> Instance
+	Instance .. Template
+	Context <-- Instance
+	Context .. Interpreter
+	Interpreter .. Expression
+	Interpreter .. Instance
+	Behavior <. Template
+	Expression <-- Behavior
+
+	Template --> (Template Compiler)
+	Behavior <--- Optimizer
+	Optimizer <- (Expression Compiler)
+	(Template Compiler) --> (Expression Compiler)
+	Behavior <-- (Template Compiler)
+}
+
+(Element) <.. (CE Registry)
+(CE Registry) <.. (Component)
+
+@enduml

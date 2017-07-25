@@ -22,7 +22,7 @@ a \text{ flatMap } (x \mapsto Signal(x)) &\equiv a \\
 (a \text{ flatMap } f)  \text{ flatMap } g &\equiv
 a \text{ flatMap } (x \mapsto f(x)  \text{ flatMap } g) 
 \end{align*}
-Ici, l'opérateur $\equiv$ désigne une équivalence structurelle: les deux expressions sont substituables sans changer le comportement du programme.
+Ici, l'opérateur $\equiv$ désigne une équivalence structurelle: les deux expressions sont substituables sans affecter le comportement du programme.
 
 \subsection{Accès à l'état courant}
 L'interface d'un signal \texttt{Signal[T]} défini deux méthodes pour accéder à sa valeur courante:
@@ -32,24 +32,25 @@ L'interface d'un signal \texttt{Signal[T]} défini deux méthodes pour accéder 
 	\item \textbf{\texttt{Signal.value}}: retourne la valeur courante du signal (donc une valeur de type \texttt{T}) s'il est défini ou lance une exception\footnote{De type \texttt{UndefinedSignalException}} s'il ne l'est pas. De façon générale, cette méthode est plutôt destinée à être utilisée dans le cadre de la définition de signaux expression (section \ref{sec:sig-expr}) puisque dans ce cas, l'exception est traitée par le constructeur et entraîne la construction d'un signal vide.
 \end{enumerate}
 
-Dans le cas où il est nécessaire d'être informé des changements d'états du signal, le mécanisme d'observateur (§~\ref{sec:sig-obs}) peut être utilisé.
+Dans le cas où il est nécessaire d'être informé des futurs changements d'états du signal, le mécanisme d'observateur (§~\ref{sec:sig-obs}) peut être utilisé.
 
 \subsection{Pureté et modes d'évaluation} \label{sec:sig-pureness}
-Un signal est considéré comme une construction fonctionnelle semi-pure: il n'est dépendant d'aucun état global à l'exception d'autres signaux et ne présente pas d'effets de bords. Ces contraintes s'étendent également aux fonctions utilisées dans leur définition ou transformation par le biais de fonctions telle que \texttt{map} ou \texttt{filter}. Le langage Scala ne permettant pas d'imposer la notion de pureté aux fonction, il est de la responsabilité du développeur de s'assurer que cette contrainte soit respectée.
+Un signal est considéré comme une construction fonctionnelle semi-pure: il n'est dépendant d'aucun état global à l'exception d'autres signaux et ne présente pas d'effets de bords. Ces contraintes s'étendent également aux fonctions utilisées dans leur définition ou transformation par le biais de méthodes telles que \texttt{map} ou \texttt{filter}. Le langage Scala ne permettant pas d'imposer la notion de pureté aux fonction, il est de la responsabilité du développeur de s'assurer que cette contrainte soit respectée.
 
 Cette contrainte découle principalement de l'existence de deux modes d'évaluations pour les signaux qui définissent à quel moment l'état d'un signal enfant doit être calculé après le changement d'état d'un de ses signaux parent:
+
 \begin{enumerate}
 	\item \emph{Paresseux}: l'état du signal enfant est réévalué à la demande, lorsque son état courant est accédé et après un changement d'état d'au moins un des ses signaux parents,
-	\item \emph{Strict}: l'état du signal enfant est réévalué aussitôt que l'état d'un de ses signaux parent est modifié.
+	\item \emph{Différé}: l'état du signal enfant est réévalué à la fermeture d'un contexte de mutation impliquant la modification d'au moins un signal parent.
 \end{enumerate}
 
-Le mode d'évaluation paresseux est le mode utilisé par défaut pour les signaux. Il offre l'avantage de réduire le nombre d'états à calculer dans le cas où un signal n'est pas accédé aussi fréquemment que son état ne change.
+Le mode d'évaluation paresseux est le mode utilisé par défaut pour les signaux. Il offre l'avantage de réduire le nombre d'états à calculer dans le cas où un signal n'est pas accédé aussi fréquemment que son état ne change. Il n'offre cependant aucune garantie concernant le moment auquel une fonction utilisée comme définition d'un signal ou d'une transformation sera appelée, ni même qu'elle sera un jour appelée. Il est donc particulièrement important que ces fonctions respectent également la contrainte de pureté des signaux pour ne pas introduire des comportements non-déterministes dans l'application.
 
-Le mode paresseux n'offre aucune garantie concernant le moment auquel une fonction utilisée comme définition d'un signal ou d'une transformation sera appelée, ni même qu'elle sera un jour appelée. Il est donc particulièrement important que ces fonctions respectent également la contrainte de pureté des signaux pour ne pas introduire des comportements non-déterministes dans l'application.
+Le mode différé n'est utilisé que dans les situations où l'événement de changement d'état est significatif en plus de la valeur de ce nouvel état. C'est par exemple le cas de l'opération \texttt{fold} (§ \ref{sec:sig-op-fold}) qui est utilisée pour combiner les états successifs d'un signal parent afin de construire l'état du signal enfant. Dans une telle situation, l'utilisation du mode paresseux rendrait le signal enfant non-déterministe puisque son état serait dépendant de la fréquence à laquelle il est accédé \footnote{Si la fréquence d'accès est inférieure à la fréquence de changement d'état du signal parent, certains états seront \emph{manqués} par l'opération de combinaison.}.
 
-Le mode strict n'est utilisé que dans les situations où l'événement de changement d'état est significatif en plus de la valeur de ce nouvel état. C'est par exemple le cas de l'opération \texttt{fold} (§ \ref{sec:sig-op-fold}) qui est utilisée pour combiner les états successifs d'un signal parent afin de construire l'état du signal enfant. Dans une telle situation, l'utilisation du mode paresseux rendrait le signal enfant non-déterministe puisque son état serait dépendant de la fréquence à laquelle il est accédé \footnote{Si la fréquence d'accès est inférieure à la fréquence de changement d'état du signal parent, certains états seront \emph{manqués} par l'opération de combinaison passé à \texttt{fold}.}.
+Par ailleurs, entre les changements d'états d'un signal parent, l'état d'un signal enfant est gardé en mémoire. L'objectif est d'éviter de devoir recalculer l'ensemble d'une hiérarchie de signaux à chaque accès d'un signal enfant. La valeur d'un signal enfant n'étant pas sensé changer sans un changement d'état d'un parent.
 
-De façon générale, l'utilisation sélective du mode d'évaluation stricte conduit à la construction de groupes de signaux à l'intérieur du graphe de dépendances qui sont toujours réévalués simultanément. Cette réévaluation groupée est cependant limitée à une petite partie du graphe et n'implique pas les mêmes coûts de calculs qu'une stratégie d'évaluation stricte qui serait utilisée de façon globale. 
+En résumé, l'usage combiné de la \emph{memoization} et de l'évaluation paresseuse rend le timing d'évaluation des fonctions utilisées pour la définition et la transformation de signaux imprévisible, d'autant plus lorsque l'application et la structure de graphe de signaux se complexifie. Respecter la contrainte de pureté lors de l'utilisation des signaux permet de s'affranchir de cette complexité et de se concentrer sur la logique métier de l'application développée.
 
 \subsection{Hiérarchie simplifiée}
 La figure \ref{fig:sig-simple-hierarchy} présente une version simplifiée de la hiérarchie des signaux. Seules les informations pertinentes à l'utilisation des signaux ont été conservée: les méthodes, interfaces, classes intermédiaires relevant des détails d'implémentation ne sont pas incluses. La hiérarchie complète formée par les signaux est présentée en section \ref{sec:sig-hierarchy}.
@@ -145,7 +146,7 @@ Une source est destinée à être utilisées lors de la construction de système
 
 \textit{À ajouter: une opération utilisant une fonction de mutation à partir de l'état courant:}
 \begin{lstlisting}
-	def ~= (f: T => T): Unit = { this := f(value) }
+def ~= (f: T => T): Unit = { this := f(value) }
 \end{lstlisting}
 
 \subsection{Signal expression} \label{sec:sig-expr}
@@ -307,8 +308,6 @@ val d: Signal[Int] = c.reduce(_ max _)
 	\end{lstlisting}
 	\caption{Exemple d'utilisation de \texttt{reduce}}
 \end{figure}
-
-\textit{À DÉTERMINER: Initialement, une variante \texttt{foldLazy} était envisagée qui produirait un signal avec le mode d'évaluation lazy. Dans quelles situations serait-ce adapté? J'avais initialement en tête des opérateurs tels que \texttt{max} qui ne conserve pas de trace de la séquence observée mais seulement un unique élément. Mais même de tels opérateurs n'ont pas de sens en évaluation paresseuse. L'essence de l'opération \texttt{fold} est de combiner des états successifs, comment cette opération peut-elle avoir un sens si certains états sont manqués de façon non-prévisible?}
 
 \subsubsection{Opérateurs d'encapsulation (\texttt{wrap / unwrap})}
 

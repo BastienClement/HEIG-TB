@@ -6,7 +6,7 @@ Les technologies web évoluent très rapidement coté client (navigateur) et per
 
 \section{Programmation réactive-fonctionnelle}
 
-La programmation réactive-fonctionnelle est une combinaison des paradigmes de programmation fonctionnelle et de programmation réactive.
+La programmation réactive-fonctionnelle combine programmation fonctionnelle et programmation réactive.
 
 Ce premier paradigme, fonctionnel, met en avant l'utilisation de structure de données immutables et de l'application de fonctions sur ses structures afin d'en dériver de nouvelles. Les effets de bords et les états globaux sont évités par l'utilisation de fonctions pures ne dépendant que de leurs paramètres. Les principes de composabilité des fonctions et de transparence référentielle qui en découlent sont alors mis en avant pour promouvoir un style de programmation qui se veut plus clair et avec moins d'effets surprenant pour le développeur.
 
@@ -94,7 +94,7 @@ La définition de nouvelle balise est un concept clé de ce travail puisque chaq
 
 \subsubsection{Shadow DOM}
 
-Probablement la spécification la plus complexe d'un point de vue implémentation pour les navigateurs et la plus difficile à \texttt{polyfill} en JavaScript. Elle définit un mécanisme permettant d'encapsuler un sous-arbre DOM et des styles CSS associés et de les rendre invisibles de l'extérieur. Ainsi:
+Probablement la spécification la plus complexe d'un point de vue implémentation pour les navigateurs et la plus difficile à \emph{polyfill} en JavaScript. Elle définit un mécanisme permettant d'encapsuler un sous-arbre DOM et des styles CSS associés et de les rendre invisibles de l'extérieur. Ainsi:
 
 \begin{itemize}
 	\item les styles CSS déclarés hors du sous-arbre ne s'appliquent pas aux éléments du sous-arbre et inversement pour les styles déclarés dans le sous-arbre;
@@ -110,10 +110,36 @@ Ce mécanisme est également clé à la réalisation de ce projet puisque chaque
 
 \subsection{Scala.js}
 
-\textit{Scala.js est un compilateur Scala \to JavaScript au lieu de Scala \to Java Bytecode. Il permet l'exécution de code Scala dans le navigateur et propose une modèle d'interopérabilité avec JavaScript permettant de manipuler facilement les API web du navigateur depuis Scala. Sémantique très proche de Scala/JVM.}
+Scala.js est un plugin du compilateur Scala produisant du code JavaScript en sortie à la place du bytecode Java. Ce code est alors directement interprétable par un navigateur web standard et ne dépend plus de la machine virtuelle Java (JVM). Scala.js peut également être utilisé avec d'autres plateforme basée sur JavaScript, par exemple Node.js.
 
-\textit{À ajouter: un peu d'histoire. Projet de thèse EPFL, soutenu par le Scala Center, une des trois plateforme officiellement développée de Scala avec ScalaNative et Scala/JVM. Stable depuis plusieurs années pour un usage en production. De nombreuses bibliothèque Scala cross-compilées pour Scala.js.}
+Conceptuellement similaire à de nombreux autre projets tels que TypeScript \cite{typescript}, ClojureScript \cite{clojure-script} et même Emscripten \cite{emscripten} comme approche alternative au développement pour le web, Scala.js se distingue par le support complet du langage Scala, y compris de ses fonctionnalités les plus avancées, ainsi que par une excellente interopérabilité avec les interfaces JavaScript natives du navigateur.
 
-\subsubsection{Limitations actuelles en rapport avec les Web Components}
+Scala.js est aussi une option intéressante lorsque le langage Scala est utilisé pour le développement du \emph{backend} d'une application web. Permettant alors le partage de sources entre le développement côté client et côté serveur. Il est alors fréquent de mettre en place un projet commun entre le serveur et le client afin de partager les définitions des données échangées sur le réseau. La communication entre les deux parties de l'application s'en trouve alors considérablement simplifiée puisque les deux \emph{parlent} le même langage.
 
-\textit{Web Components requiert des classes ES6, obligation du coup d'utiliser le mode d'émission ES6 de Scala.js qui est expérimental. En pratique semble fonctionner. Mais du coup impossible d'utiliser Google Closure Compiler pour optimiser le script final. Conduisant à des fichiers JavaScript beaucoup plus volumineux que nécessaire. Support d'ES6 dans la roadmap de Closure Compiler, mais pas encore là. Une simple compression GZip réduit considérablement l'impact du problème.}
+Une attention particulière a été portée à respecter la sémantique d'exécution de la JVM, les différences entre les plateformes sont généralement invisibles pour le développeur et un code source identique s'exécute correctement et sans modification sur les deux plateformes.
+
+Le projet est à présent bien intégré dans l'écosystème Scala: de nombreuses bibliothèques sont \emph{cross-compilées} à la fois pour la plateforme Java et pour JavaScript et le projet est considéré stable pour une utilisation en production depuis plusieurs années. Le support de multiples plateforme d'exécution pour le langage Scala est renforcé par le développement récent de Scala Native \cite{scalanative} visant la génération de code natif à partir de sources Scala en utilisant le compilateur LLVM \cite{llvm}.
+
+\subsection{Limitations actuelles}
+
+Les \emph{Web Components} sont une technologies \emph{cutting edge}. Très récemment standardisées, son support par les différents navigateurs laisse encore beaucoup à désirer. De plus, la spécification bâtit sur les bases du langage \emph{ECMAScript 2015} (ES6), la dernière version du langage JavaScript. Il est par exemple nécessaire de déclarer une \emph{classe}\footnote{Construction introduite avec la version ES6} JavaScript pour implémenter le comportement d'un élément personnalisé, par opposition à une simple fonction constructeur tel qu'il était le cas dans la version antérieur du standard. L'utilisation d'ES6 devient donc obligatoire, malgré que son support actuel soit toujours très variable entre les différents navigateurs.
+
+Heureusement, le compilateur Scala.js possède une option lui indiquant de produire du code JavaScript ES6 plutôt que la version plus répandue ES5. Lorsque cette option est activée, le compilateur utilise extensivement les nouveaux mécanismes du langage ES6, notamment les classes, et permet la définition d'élément personnalisé conformément aux standards.
+
+Cette option introduit cependant une série de complications:
+
+\begin{itemize}
+	\item Le support du mode ES6 de Scala.js est considéré expérimental. En pratique, la génération de code ne semble pas être un problème et le code produit s'exécute parfaitement avec le navigateur Google Chrome. En revanche, Firefox semble avoir quelques problèmes avec des structures pourtant standards.
+	\item L'optimisateur de Scala.js est construit sur la base du \emph{Closure Compiler} \cite{closure-compiler}, un compilateur \emph{Javascript-to-Javascript} de Google dont la tâche est d'optimiser et compresser le code JavaScript traité. Cependant, celui-ci ne supporte pas encore ES6. Le compilateur Scala.js tend à produire des noms de fonctions et variables particulièrement longs, ce qui gonfle rapidement le taille du fichier final si l'optimisateur ne peut pas effectuer son travail.
+	\item L'option n'affecte que la génération finale du fichier JavaScript. Lorsqu'une bibliothèque Scala.js est publiée, celle-ci contient à la place des fichiers \emph{.sjsir}, une représentation intermédiaire pour le compilateur Scala.js. Ces fichiers seront alors utilisés pour construire l'unique fichier \emph{.js} lors du processus de compilation de l'application finale. Il est ainsi nécessaire que le support d'ES6 soit activé explicitement par l'utilisateur de la bibliothèque, ce qui peut compliquer légèrement son intégration dans un projet existant.
+\end{itemize}
+
+Au final, le choix a été fait d'ignorer ces complications. ES6 est la version actuelle du langage JavaScript et son support est un effort important du développement des navigateurs. Le fait que les spécifications le plus récentes l'imposent indique qu'il est temps pour les navigateurs et les développeurs d'évoluer vers le nouveau standard.
+
+Le support d'ES6 par \emph{Closure Compiler} est également un domaine de développement actif du projet. D'ici là, l'absence de l'optimisateur peut être compensée par l'utilisation de la compression au niveau du protocole HTTP. En mode ES5, une compression \emph{GZip} sur le fichier original sans optimisation produit en effet un fichier plus léger que la version produite par l'optimisateur \footnote{Source: 1779KB, Opt: 389KB, Gzip: 190KB, Opt + Gzip: 83KB}. L'idéale reste bien sûr la combinaison des deux, mais le résultat est déjà plus que satisfaisant.
+
+Du fait de ces différentes limitations et du support actuelle des technologies \emph{Web Components}, une application construite avec Xuen ne peut être exécutée que dans un navigateur basé sur les moteurs de rendu \emph{Blink} ou \emph{WebKit}, c'est à dire Google Chrome, Opera et Safari. Les navigateurs Firefox et Edge ne supportent actuellement pas les \emph{Web Compoenents}.
+
+En pratique, Safari présente d'autre limitations au niveau des technologies CSS utilisées pour la construction de l'interface de l'application de démonstration, notamment au niveau du support \emph{FlexBox} \cite{w3c-css-flexbox} et \emph{CSS Containment} \cite{w3c-css-contain}. Le développement a donc été focalisé sur la plateforme Blink.
+
+À plus long terme, l'évolution des navigateurs et des outils utilisés pour s'aligner avec les standards actuels devrait permettre l'utilisation de la bibliothèque de façon optimale et sans complications sur tous les navigateurs, avec un minimum d'adaptations.

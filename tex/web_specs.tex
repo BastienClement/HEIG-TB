@@ -109,7 +109,7 @@ object HelloWorld extends Component[HelloWorld](
 )
 \end{lstlisting}
 
-\subsection{Element}
+\subsection{Element} \label{sec:web-specs-element}
 
 La définition du comportement d'un composant se fait par la définition d'une sous-classe de \texttt{x.c.Element} qui est ensuite passée au constructeur de \texttt{Component} (§ \ref{sec:web-usage-component}). Chaque instance du composant sera alors une instance de cette classe.
 
@@ -231,6 +231,8 @@ Une expression d'interpolation ne peut jamais échouer, les cas de valeurs \text
 
 Il n'est pas possible de placer une interpolation dans un attribut dont le contenu est déjà interprété comme une expression. C'est par exemple le cas des attributs qui sont des annotations de \emph{data-binding}. Il n'est pas non plus possible d'emboîter une interpolation dans une autre.
 
+Il est cependant autorisé de placer une interpolation dans un commentaire HTML comme utilitaire de développement.
+
 \subsubsection{Annotation d'identifiant}
 Un attribut dont le nom débute par \texttt{\#} est traité comme une annotation d'identifiant, spécifiant la valeur de l'attribut \texttt{id} de l'élément. Cette simple annotation est principalement un sucre syntaxique et la valeur de l'attribut, si elle est spécifiée, est ignorée.
 
@@ -339,17 +341,108 @@ Cependant, l'ajout d'un élément supplémentaire peut avoir des effets secondai
 Lorsqu'une transformation est appliquée sur un élément \texttt{<template>}, cet élément est supprimé du sous-arbre DOM produit par la transformation et seul son contenu est inséré. Il se substitue ainsi à l'élément encapsulant mentionné précédemment et disparait totalement lors de l'application de la transformation.
 
 \subsection{Expressions} \label{sec:web-usage-expr}
-\textit{La syntaxe des expressions est fortement inspirée des expressions de Angular 2, sémantiquement adaptée pour correspondre à une usage combiné aux signaux.}
+Les expressions sont à la base des comportements dynamiques dans les templates Xuen. Elles sont fortement inspirées de la syntaxe de JavaScript et suivent en grande partie la sémantique de celui-ci.
 
-\textit{Parser construit avec les "Parser Combinators" de Scala. Production d'un AST représentant l'expression puis optimisation de cet arbre.}
+Les expressions sont conçues pour être utilisées en combinaison avec les signaux Xuen. Le résultat de l'évaluation d'une expression est transformé en \texttt{Signal}, permettant ainsi de profiter du mécanisme de propagation des changements implémentés dans les signaux. Lorsqu'un signal référencé dans une expression change, la valeur de l'expression est recalculée et le template mis à jour en conséquence.
 
-\textit{De façon similaire aux templates: coût initial important puis faible coût lors de l'utilisation.}
+À l'intérieur même d'une expression, les signaux accédés sont décomposés par l'interpréteur. Si l'interpréteur rencontre un fragment d'expression produisant une valeur de type \texttt{Signal[T]}, cette valeur sera transformée en simple \texttt{T} en invoquant la méthode \texttt{value} du signal. Ce processus est récursif, une valeur de type \texttt{Signal[Signal[T]]} sera également extraite en une valeur \texttt{T}. Si un signal indéfini est rencontré, la valeur \texttt{undefined} est utilisée à la place. L'évaluation de l'expression continue alors avec la nouvelle valeur.
 
-\textit{L'AST est passé à un interpréteur en même temps qu'une contexte d'évaluation spécifiant les variables globales à disposition est le composant dans lequel l'expression s'exécute.}
+Il n'est donc pas nécessaire lors de la construction d'une expression de se soucier de l'encapsulation d'une valeur dans un signal puisque celui-ci sera automatiquement retiré par l'interpréteur.
 
-\textit{Peut être une section à part entière}
+\begin{figure}[h]
+	\begin{lstlisting}
+class HelloWorld extends Element(HelloWorld) {
+	val name = attribute[String]
+	// `name` est une `Source[String]` une sous-classe de `Signal[String]`
+}
+
+object HelloWorld extends Component[HelloWorld](
+	selector = "hello-world",
+	template = html"""
+		Hello, {{name}}!
+		<!-- Dans une expression, `name` est traité comme une simple valeur `String` -->
+	"""
+)
+
+// Utilisation:
+<hello-world name="Bastien"></hello-world>
+	\end{lstlisting}
+	\caption{Exemple illustrant l'extraction automatique des valeurs \texttt{Signal} lors de l'évaluation d'une expression}
+\end{figure}
+
+\subsubsection{Contexte d'évaluation}
+Une expression est toujours évaluée par rapport à un contexte spécifique. Ce contexte défini le monde extérieur autour de l'expression. Il est pas exemple utilisé lorsque l'expression fait référence à des variables ou des fonctions. Dans ce cas, le contexte est invoqué pour obtenir la valeur de cette variable.
+
+Dans la plupart des cas, le contexte d'une expression sera l'\texttt{Element} auquel le template est associé. Les variables et les fonctions invoquées correspondent respectivement aux propriétés et méthodes de l'objet \texttt{Element}.
+
+\begin{lstlisting}
+class HelloWorld extends Element(HelloWorld) {
+	val foo = 2
+	def bar(v: Int): Int = v * 3
+}
+
+<div>{{ foo + bar(5) }}</div>
+--> <div>17</div>
+\end{lstlisting}
+
+Certaines constructions, par exemple une transformation \texttt{*for} ou une annotation d'événement, peuvent introduire des contextes \emph{enfants}. Ces contextes sont comparables au concept de \emph{scope} d'un langage de programmation. Les propriétés présentes sur le contexte enfant sont disponibles en plus des propriétés du contexte parent. Dans le cas où une propriété est présente à la fois dans le contexte parent et le contexte enfant, la propriété du contexte enfant masque celle du contexte parent (\emph{shadowing}).
+
+\begin{lstlisting}
+class HelloWorld extends Element(HelloWorld) {
+	val foo = List(3, 5)
+	val i = 8
+	val j = 13
+}
+
+<div>
+	<span>{{i + j}}</span>
+	<span *for="i of foo">{{i + j}}</span>
+</div>
+--> <span>21</span> <span>16</span> <span>18</span>
+\end{lstlisting}
+
+\subsubsection{Opérateur d'accès protégé \texttt{?.}}
+L'opérateur \texttt{?.} est similaire à l'usage à l'opérateur simple \texttt{.}: il permet d'accéder à une propriété ou une méthode de l'expression à sa gauche et prend un identifier à sa droite pour identifier la propriété accédée.
+
+En revanche, lorsque l'expression à gauche de l'opérateur \texttt{.} est \texttt{undefined}, tenter de l'indexer avec l'opérateur \texttt{.} provoque une erreur. Ceci est utile en phase de développement pour identifier les situations où une référence qui ne devrait pas être indéfinie l'est tout de même.
+
+Dans le cas où il est normale que le membre de gauche puisse être \texttt{undefined}, l'usage de l'opérateur protégé \texttt{?.} ne provoque pas d'erreur et retourne simplement \texttt{undefined} à son tour, permettant ainsi de le chaîner autant de fois que nécessaire. Si la référence indexée est définie, l'opérateur \texttt{?.} se comporte de façon identique à l'opérateur \texttt{.} classique.
 
 \subsection{Feuille de styles}
-\textit{Simple morceau de code CSS qui sera injecté dans le sous-arbre Shadow DOM correspondant au composant.}
+La feuille de styles d'un composant est un simple fragment de code CSS qui sera injecté dans le sous-arbre Shadow DOM d'un composant. Aucun traitement particulier n'est appliqué au code source CSS.
+
+La feuille de styles est injectée sous la forme d'un élément \texttt{<style>} contentant les définitions CSS. Puisque cet élément est placé dans un sous-arbre DOM, la portée de ses sélecteurs est limitée à ce sous-arbre. Il n'y a donc pas de conflits au niveau des identifiant des éléments du template (attribut \texttt{id}) ou du nom des classes, conduisant à des sélecteur extrêmement simples et concis.
+
+Spécifiquement l'élément \texttt{<style>} est inséré en tant que dernier enfant du sous-arbre Shadow DOM. Ce qui a pour implication que le dernier élément du template ne vérifie pas le sélecteur \texttt{:last-child}, puisque l'élément \texttt{<style>} est en pratique le dernier élément du template. En revanche, le sélecteur \texttt{:first-child} identifie correctement le premier élément dans le template. Si l'usage du sélecteur \texttt{:last-child} s'impose, il est possible d'envelopper le template dans un élément \emph{wrapper} et ainsi ignorer la présence de l'élément \texttt{<style>} en tant que dernier fils du sous-arbre.
+
+Il est possible de faire référence à l'élément hôte lui même, c'est à dire l'élément possédant la racine du sous-arbre Shadow DOM, avec le sélecteur \texttt{:host}. La version fonctionnelle de ce sélecteur (\texttt{:host(selector)}) permet de faire référence à l'élément hôte uniquement si celui-ci vérifie également le sélecteur passé en paramètre.
+
+L'élément sélectionné par le sélecteur \texttt{:host} correspond à l'élément personnalisé lui-même, qui est également accessible en dehors du sous-arbre Shadow DOM. Dans le cas où une propriété CSS est définie à la fois à l'intérieur (par la feuille de styles de l'élément lui-même) et à l'extérieur du sous-arbre Shadow DOM (par une feuille de styles dans le contexte parent), la définition extérieur s'applique et la définition intérieur est ignorée. Par exemple, la marge interne d'un élément \texttt{<hello-world>} dont la feuille de styles contiendrait \texttt{:host \{ padding: 12px; \}} pourrait être modifiée en spécifiant: \texttt{hello-world \{ padding: 0px; \}} dans la feuille de styles de l'élément parent (ou du document).
+
+Ces sélecteurs ne sont pas une spécificité de Xuen, ils font partie de la spécification \emph{CSS Scoping} des standards web. Puisque Xuen se base sur l'implémentation standard des \emph{Web Components} pour ses propres composants, il est possible de profiter des standards annexes développés pour \emph{Web Components} lorsque cela est applicable.
+
+\subsubsection{Variables CSS}
+Le mécanisme de variables CSS est également un standard web qui est à présent implémenté dans la quasi-totalité des navigateurs modernes. En pratique le support des variables CSS est plus répandu que le support de \emph{Shadow DOM} et \emph{Custom Elements}, elles peuvent donc être considérée comme utilisables dans ce projet.
+
+Une variable CSS prend la forme d'une propriété personnalisée dont le nom débute par deux tiret \texttt{--}. Par exemple, la déclaration \texttt{--foo: 2} défini une variable \texttt{--foo} dont la valeur est \texttt{2}.
+
+Le nom de \emph{variable} est trompeur. En pratique, ces constructions se comportent plus comme une constante, qui est propagée entre les éléments par le mécanisme de cascade classique de CSS. Cette valeur peut alors être redéfinie et la nouvelle valeur sera effective pour le reste de la cascade.
+
+Ceci peut être comparé à la valeur de la propriété \texttt{font-size} qui est appliquée par cascade à tous les sous-élément de l'élément auquel elle est appliquée, et qui peut être écrasée par la définition d'une nouvelle propriété \texttt{font-size} sur l'un de ces sous-éléments.
+
+La valeur d'une variable CSS est accédée par la fonction \texttt{var()} prenant le nom de la variable en paramètre et optionnellement une valeur par défaut. Par exemple,
+\begin{lstlisting}[language=HTML]
+body {
+	--bg-color: blue;
+}
+
+div {
+	background-color: var(--bg-color, red);
+}
+\end{lstlisting}
+
+Les variables CSS sont la méthodes préférée pour paramétrer l'apparence d'un élément personnalisé. La liste des variables CSS utilisée par un élément sont ainsi une part intégrale de l'interface publique de l'élément.
+
+\subsection{Service}
 
 \subsection{Router}
