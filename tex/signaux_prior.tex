@@ -80,5 +80,4 @@ Une approche alternative est possible: \texttt{DynamicVariable}. Cette classe de
 
 Le code est ainsi fortement simplifié puisque la transmission du contexte est clairement dissociée, évitant la nécessité de modifier le code utilisateur et donc l'usage de macros au prix d'une architecture pouvant être considérée moins pure d'un point de vue fonctionnel. L'absence de macros permet également une compatibilité plus aisée avec les futures versions du langage.
 
-\subsubsection{Évaluation stricte}
-\textit{Les \texttt{Rx}s de Scala.rx sont toujours évaluées de façon stricte. L'approche lazy des signaux de Xuen présente des avantages.}
+En contre partie, la détection automatique des dépendances dépend de l'exécution synchrone de l'expression de définition (§~\ref{sec:sig-pureness}). De façon générale, effectuer le calcul de la valeur d'un signal de façon différé par rapport à l'instant d'évaluation choisi par la bibliothèque ne semble pas compatible avec les objectifs de fournir un modèle d'évaluation strict et prévisible.

@@ -1,7 +1,5 @@
 \section{Spécifications} \label{sec:web-specs}
 
-\textit{L'architecture du framework web est encore à un stade très primitif.}
-
 \subsubsection{Notation abrégée des packages}
 Dans la suite de cette section, afin de réduire la longueur des noms des packages, une notation abrégée est utilisée à la place du nom complet d'une classe:
 \begin{itemize}
@@ -23,12 +21,12 @@ Un composant est la brique essentiel de construction d'une application. Il corre
 Un composant est défini à partir de:
 \begin{itemize}
 	\item Un sélecteur: correspondant à la balise HTML qui sera définie pour ce composant. Ce nom doit comporter un tiret (selon la spécification \emph{Custom Elements})
-	\item Une implémentation: une sous-classe de \texttt{x.c.Element}, définissant le comportement des instances de ce composant
+	\item Une implémentation (§ \ref{sec:web-specs-element}): une sous-classe de \texttt{x.c.Element}, définissant le comportement des instances de ce composant
 \end{itemize}
 Optionnellement, un composant peut également posséder:
 \begin{itemize}
-	\item Un template: une structure HTML pouvant contenir des expressions de \emph{data-binding} avec des données réactives sous la forme de signaux, ce template sera matérialisé pour chaque instance du composant 
-	\item Une feuille de styles: pouvant être utilisée pour définir l'apparence visuelle du composant
+	\item Un template (§ \ref{sec:web-specs-template}): une structure HTML pouvant contenir des expressions de \emph{data-binding} avec des données réactives sous la forme de signaux, ce template sera matérialisé pour chaque instance du composant 
+	\item Une feuille de styles (§ \ref{sec:web-specs-stylesheet}): pouvant être utilisée pour définir l'apparence visuelle du composant
 	\item Une liste de dépendances: une liste d'autres composants devant être chargés avant ce composant, cette liste correspond à d'autres composants utilisés dans le template de ce composant.
 \end{itemize}
 
@@ -208,7 +206,7 @@ En pratique, une déclaration \texttt{property[T]} correspond à la construction
 
 \textit{Custom events lors de la connexion / déconnexion d'un élément}
 
-\subsection{Template}
+\subsection{Template} \label{sec:web-specs-template}
 
 Un template est une structure de noeuds DOM qui sont automatiquement insérés dans le sous-arbre Shadow DOM d'un composant lorsque celui-ci est instancié. Cette structure est généralement définie à partir du code source HTML correspondant et l'interpolateur \texttt{html}, en paramètre au constructeur de \texttt{Component}.
 
@@ -408,7 +406,7 @@ En revanche, lorsque l'expression à gauche de l'opérateur \texttt{.} est \text
 
 Dans le cas où il est normale que le membre de gauche puisse être \texttt{undefined}, l'usage de l'opérateur protégé \texttt{?.} ne provoque pas d'erreur et retourne simplement \texttt{undefined} à son tour, permettant ainsi de le chaîner autant de fois que nécessaire. Si la référence indexée est définie, l'opérateur \texttt{?.} se comporte de façon identique à l'opérateur \texttt{.} classique.
 
-\subsection{Feuille de styles}
+\subsection{Feuille de styles} \label{sec:web-specs-stylesheet}
 La feuille de styles d'un composant est un simple fragment de code CSS qui sera injecté dans le sous-arbre Shadow DOM d'un composant. Aucun traitement particulier n'est appliqué au code source CSS.
 
 La feuille de styles est injectée sous la forme d'un élément \texttt{<style>} contentant les définitions CSS. Puisque cet élément est placé dans un sous-arbre DOM, la portée de ses sélecteurs est limitée à ce sous-arbre. Il n'y a donc pas de conflits au niveau des identifiant des éléments du template (attribut \texttt{id}) ou du nom des classes, conduisant à des sélecteur extrêmement simples et concis.

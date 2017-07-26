@@ -64,57 +64,22 @@ La figure \ref{fig:sig-simple-hierarchy} présente une version simplifiée de la
 
 Le trait racine \texttt{Signal} est l'interface générique destinée à être manipulée par le développeur, quelque soit le type concret de signal manipulé. Il expose les méthodes nécessaires à l'accès à l'état courant du signal ainsi qu'à la construction de signaux dérivés par transformation. C'est une interface immutable qui ne permet de modifier l'état courant du signal.
 
-La séparation des signaux en deux sous-arbres --- \texttt{Mutable} et \texttt{Immutable} --- capture les différences sémantiques liées à la présence ou l'absence d'une garantie d'immutabilité de l'état d'un signal.
+La séparation des signaux en deux sous-arbres, \texttt{Mutable} et \texttt{Immutable}, capture les différences sémantiques liées à la présence ou l'absence d'une garantie d'immutabilité de l'état d'un signal.
 
-L'intérêt d'un signal dont la valeur ne varie pas peut sembler limité à priori mais se présente lorsqu'une valeur non-signal doit être encapsulée dans un signal afin de satisfaire le système de types. Un tel signal n'a pas de raison de changer d'état au fil du temps, il est alors effectivement immutable. La présence de cette contrainte de façon explicite au niveau de la hiérarchie permet la mise en place d'un certain nombre d'optimisations.
+L'intérêt d'un signal dont la valeur ne varie pas peut sembler limité à priori mais se révèle lorsqu'une valeur non-signal doit être encapsulée dans un signal afin de satisfaire le système de types. Un tel signal n'a pas de raison de changer d'état au fil du temps, il est alors effectivement immutable. La présence de cette contrainte de façon explicite au niveau de la hiérarchie permet la mise en place d'un certain nombre d'optimisations.
 
 Une instance de la classe \texttt{Constant[T]} est simplement une valeur de type \texttt{T} avec une interface de signal. Un tel signal est toujours dans l'état \emph{défini}.
 
-L'objet singleton \texttt{Undefined} représente quant à lui le signal dont l'état est toujours \emph{indéfini}. Il est généralement référencé à partir de l'objet compagnon du trait \texttt{Signal}: sous la forme \texttt{Signal.undefined}. Puisqu'il n'est jamais défini, il est défini comme une instance de \texttt{Signal[Nothing]}, il est donc par covariance substituable à n'importe quel type de signal \texttt{Signal[T]} \footnote{\texttt{Nothing} est le \emph{bottom type} du système de types en Scala, il est sous-type de tous les types ($\forall \texttt{T}, \texttt{Nothing <: T}$) mais il n'en existe aucune instance.}.
+L'objet singleton \texttt{Undefined} représente quant à lui le signal dont l'état est toujours \emph{indéfini}. Il est généralement référencé à partir de l'objet compagnon du trait \texttt{Signal}: sous la forme \texttt{Signal.undefined}. Puisqu'il n'est jamais défini, il est déclaré comme une instance de \texttt{Signal[Nothing]}. Il est ainsi, par covariance, substituable à n'importe quel type de signal \texttt{Signal[T]} \footnote{\texttt{Nothing} est le \emph{bottom type} du système de types en Scala, il est sous-type de tous les types ($\forall \texttt{T}, \texttt{Nothing <: T}$) mais il n'en existe aucune instance.}.
 
 Un signal immutable ne peut être ni \emph{enfant} ni \emph{parent} d'autres signaux. Comme ils ne changent jamais, il n'y a pas de sens de maintenir de graphe de dépendances entre eux. Il n'y aura en effet jamais de propagation de changement d'état à effectuer.
-
-Les opérations de transformation --- \texttt{map}, \texttt{flatMap}, \texttt{filter}, etc. --- appliquées à des signaux constants sont évaluées immédiatement et produisent un nouveau signal constant. Par exemple:
-
-\begin{lstlisting}
-val a: Constant[Int] = Constant(2)
-val b: Constant[Int] = a.map(_ * 2) // effectuée immédiatement
-\end{lstlisting}
-
-\begin{figure}
-	\begin{lstlisting}
-var i: Int = 0
-def f(v: Int): Int = { i += 1; v * 2 }
-
-// Immutable
-val a: Constant[Int] = Constant(2)
-val b: Constant[Int] = a.map(f)
-assert(i == 1) // `f` est évaluée immédiatement
-
-// Mutable
-val c: Signal[Int] = Signal(2)
-val d: Signal[Int] = c.map(f)
-assert(i == 1) // `f` est évaluée de façon paresseuse
-assert(d.value == 4) // accès à l'état de `d`, évaluation
-assert(i == 2)
-
-// Une sémantique peut en cacher une autre...
-val e: Signal[Int] = Constant(2) // typé `Signal`
-val f: Signal[Int] = c.map(f)
-assert(i == 3)
-	\end{lstlisting}
-	\caption{Exemple d'évaluation immédiate des transformations}
-	\label{fig:constant-eager-transform}
-\end{figure}
-
-La figure \ref{fig:constant-eager-transform} illustre ce comportement de façon plus explicite par l'introduction d'effets de bord dans la fonction de transformation utilisée. Cet exemple souligne également l'importance de la pureté des fonctions utilisées en pratique.
 
 Les deux types de signaux mutables, sources (§ \ref{sec:sig-source}) et expressions (§ \ref{sec:sig-expr}), sont décrits plus en détails dans les sections les concernant.
 
 \subsection{Construction}
 Un signal est généralement dérivé par transformation de signaux existants. Cependant, dans le cas où un nouveau signal racine doit être construit, deux approches sont disponibles.
 
-La première méthode est l'utilisation des constructeurs offerts par l'objet \texttt{Signal}:
+La première méthode est l'utilisation des constructeurs offerts par l'objet compagnon du trait \texttt{Signal}:
 
 \begin{itemize}
 	\item \code{def Signal.apply[T](expr: => T): Signal[T]}
@@ -125,7 +90,15 @@ L'expression fournie à \texttt{apply} sera évaluée pour déterminer la valeur
 
 La variante \texttt{define} est similaire mais considère une valeur \texttt{None} comme un signal indéfini tandis qu'une valeur \texttt{Some(v)} est considérée comme un signal défini et de valeur \texttt{v}. 
 
-La secondes approche consiste en l'utilisation explicite d'un signal de type \texttt{Source} (§ \ref{sec:sig-source}). 
+S'il n'est pas souhaitable que l'expression de définition soit évaluée immédiatement, il est possible de différé son évaluation au premier accès à l'état du signal produit en utilisant le constructeur
+\begin{center}
+	\code{def Signal.defer[T](expr: => T): Signal[T]}
+\end{center}
+Le signal ainsi produit sera de type \texttt{Expression[T]}, même si l'expression passée ne fait référence à aucun autre signal, formant alors un signal expression effectivement constant.
+
+Les méthodes \texttt{apply}, \texttt{define} et \texttt{defer} prennent en réalité des paramètres optionnels supplémentaires permettant de configurer la sémantique du signal défini. La signature complète de ces méthodes est disponible dans la Scaladoc du projet.
+
+La secondes approche consiste en la construction explicite d'un signal de type \texttt{Source} (§ \ref{sec:sig-source}). 
 
 \subsection{Signal source} \label{sec:sig-source}
 
@@ -144,10 +117,21 @@ permettant de mettre à jour la valeur contenue dans la source de façon impéra
 
 Une source est destinée à être utilisées lors de la construction de système hybrides, combinant code impératif basé sur les effets de bords et code fonctionnel. La source est alors un point d'entrée dans le graphe de dépendances des signaux pour la partie de code impérative.
 
-\textit{À ajouter: une opération utilisant une fonction de mutation à partir de l'état courant:}
-\begin{lstlisting}
-def ~= (f: T => T): Unit = { this := f(value) }
-\end{lstlisting}
+Une surcharge de l'opérateur de mutation
+\begin{center}
+	\code{def := (nil: Signal.nil.type): Unit}
+\end{center}
+permet de définir explicitement l'état indéfini pour la source. Cette surcharge est invoquée en passant explicitement l'objet \texttt{Signal.nil} en tant qu'opérande de droite à l'opérateur \texttt{:=}.
+
+Finalement, si la nouvelle valeur d'une source est dérivée de sa valeur actuelle, l'opérateur de mise à jour
+\begin{center}
+	\code{def ~= (f: T => T): Unit}
+\end{center}
+permet de fournir une fonction qui sera invoquée avec la valeur courante de la source et dont la valeur de retour sera utilisée comme nouvelle valeur de la source. Si la source est actuellement indéfinie, l'opérateur n'a aucun effet et la fonction n'est pas invoquée.
+
+Cet opérateur est plus qu'un simple sucre syntaxique par rapport à l'usage explicite des méthodes \texttt{option} et \texttt{value}. Dans le contexte des observateurs (§~\ref{sec:sig-obs}), accéder à la valeur d'une source (de même que n'importe quel type de signal mutable) établi une dépendance entre le signal et l'observateur. L'observateur est donc invoqué à chaque changement de la source et son implémentation consiste à la mutation de cette même source, établissant ainsi une boucle infinie.
+
+À l'inverse, l'opérateur \code{~=} ne construit pas de dépendance entre la source et l'observateur. Il est bien entendu de la responsabilité du développeur de s'assurer de ne pas \emph{leak} la valeur précédente ou courante de cette source hors de la fonction de mutation.
 
 \subsection{Signal expression} \label{sec:sig-expr}
 
@@ -167,7 +151,7 @@ val c: Signal[Int] = Signal {
 	\label{fig:signal-expr-init}
 \end{figure}
 
-Les parents d'un signal expression sont dynamiques. À chaque évaluation, la liste des parents est vidée puis reconstruite selon l'évaluation actuelle. De cette façon, les dépendances sont toujours le plus précises possible et les invalidation inutiles sont évitées. Ceci est particulièrement important dans le cas de signaux contenant des branches et donc un ensemble de dépendances dynamiques selon l'état d'autres signaux.
+Les parents d'un signal expression sont dynamiques. À chaque évaluation, la liste des parents est vidée puis reconstruite selon l'évaluation actuelle. De cette façon, les dépendances sont toujours les plus précises possible et les invalidations inutiles sont évitées. Ceci est particulièrement important dans le cas de signaux contenant des branches et donc un ensemble de dépendances dynamiques selon l'état d'autres signaux.
 
 Dans l'exemple de la figure \ref{fig:signal-expr-branches}, le signal construit ne dépend de \texttt{b} que si la valeur du signal \texttt{a} est \texttt{false}. Dans le cas contraire, il est dépendant de \texttt{c}. Dans tous les cas, une dépendance est créée vers le signal \texttt{a}.
 
@@ -201,6 +185,8 @@ Il est intéressant de noter que la seule observation du paramètre de type du s
 
 \subsection{Opérateurs de transformations}
 Dans les exemples ci-dessous, les opérations sont supposées appliquées à une instance de type \texttt{Signal[T]}, \texttt{T} faisant ainsi référence au type d'élément contenu dans le signal original. Seules les opérateurs les plus courants et ceux utilisées par le compilateur Scala lors de la compilation d'une compréhension \texttt{for} sont traités ici. La Scaladoc du projet contient une liste exhaustive des opérations disponibles.
+
+Ces transformations sont pour la plupart construites autour du constructeur \texttt{Signal.define}. Leur évaluation est donc immédiate et produit un valeur de retour en fonction des dépendances du signal original et des signaux accédés par la fonction de transformation fournie. Par exemple, invoquer la méthode \texttt{map} sur un signal \texttt{Constant} retournera en principe un signal \texttt{Constant}, sauf si la fonction passée à \texttt{map} fait référence à la valeur d'autres signaux, produisant alors un signal \texttt{Expression} non-constant.
 
 \subsubsection{Opérateur de transformation simple (\texttt{map})}
 
@@ -277,7 +263,7 @@ Lors d'un changement d'état du signal initial, l'\emph{accumulateur antérieur}
 
 Le signal retourné par \texttt{fold} est toujours défini.
 
-L'opérateur \texttt{fold} possède la particularité d'être affecté par le mode d'évaluation du signal qu'il produit. En mode paresseux, l'opérateur de combinaison ne serait appliqué que lors de l'accès au signal enfant. Il serait alors possible de \emph{manquer} des changements d'état du signal parent. C'est pourquoi les signaux produits par l'opérateur \texttt{fold} ont toujours un mode d'évaluation strict afin d'obtenir un comportement déterministe et indépendant de la façon dont le signal enfant est utilisé.
+L'opérateur \texttt{fold} possède la particularité d'être affecté par le mode d'évaluation du signal qu'il produit. En mode paresseux, l'opérateur de combinaison ne serait appliqué que lors de l'accès au signal enfant. Il serait alors possible de manquer des changements d'état du signal parent. C'est pourquoi les signaux produits par l'opérateur \texttt{fold} ont toujours un mode d'évaluation différé afin d'obtenir un comportement déterministe et indépendant de la façon dont le signal enfant est utilisé.
 
 À l'inverse de la fonction \texttt{fold} présente sur les collections de la bibliothèque standard Scala qui retourne une unique valeur pour une collection. La fonction \texttt{fold} des signaux retourne également un \texttt{Signal}. Le nom \emph{fold} ne fait ainsi pas référence au passage d'une collection à un élément unique, mais à la combinaison successive des différents \emph{états} du signal parent.
 
@@ -300,7 +286,7 @@ L'opérateur \texttt{reduce} est une variation de l'opérateur \texttt{fold} don
 	\begin{lstlisting}
 val a: Signal[Int] = ...
 val b: Signal[Int] = a.reduce((acc, x) => x)
-// La valeur du signal `b` reflète la valeur du signal `a` lorsque celui-ci est défini. Lorsqu'il est indéfini, le signal `b` contient la dernière valeur définie du signal `b`. Si `a` n'a jamais été défini, `b` est indéfini.
+// La valeur du signal `b` reflète la valeur du signal `a` lorsque celui-ci est défini. Lorsqu'il est indéfini, le signal `b` contient la dernière valeur définie du signal `a`. Si `a` n'a jamais été défini, `b` est indéfini.
 
 val c: Signal[Int] = ...
 val d: Signal[Int] = c.reduce(_ max _)
@@ -353,50 +339,155 @@ def reduce[U >: T](s: Signal[T])(op: (U, T) => U): Signal[U] = {
 
 Les observateurs permettent d'ajouter des effets de bords aux changements d'états d'un signal. De la même façon que les sources sont les points d'entrée dans un graphe de signaux, les observateurs sont les points de sorties.
 
-{\itshape
+Un observateur se construit par l'invocation du constructeur
+\begin{center}
+	\code{Observer.apply(body: => Unit): Observer}
+\end{center}
 
-Les observateurs ne sont pas encore implémentés au niveau de la bibliothèque. Quelques propriétés prévues:
-\begin{itemize}
-	\item Un observateur possède un ensemble de signaux qu'il observe
-	\item Il est invoqué lorsque l'état d'un de ces signaux change
-	\item Détection dynamique des signaux observés de façon similaire aux signaux expression; l'ensemble des signaux observés peut varier au cours du temps.
-	\item Un observateur peut être désactivé pour le déconnecter du graphe de signaux
-	\item Il peut être réactivé par la suite
-	\item Appelé de façon asynchrone à la fin d'un contexte de mutation atomique, avec la sémantique exactly-once.
-\end{itemize}
+Il se comporte de façon similaire à un signal différé. Lorsque l'état d'un signal change, tous les observateurs attachés à ce signal sont placés dans une queue. Le processus se poursuit alors pour les signaux enfants, ajoutant les observateurs attachés à ces signaux à la queue. Une fois l'ensemble des signaux enfants invalidés, les observateurs sont invoqués (§ \ref{sec:sig-mut-context}).
 
+Un observateur peut se trouver dans deux états distinct:
+\begin{enumerate}
+	\item Attaché (\emph{bound}): l'observateur est actif et sera invoqué pour chaque changement d'état des signaux qu'il observe.
+	\item Détaché (\emph{unbound}): l'observateur est inactif, il est effectivement retiré de tous les signaux qu'il observait précédemment et ne sera plus invoqué jusqu'à ce qu'il soit explicitement réactivé.
+\end{enumerate}
 
+Un observateur peut être attaché ou détaché en invoquant les méthodes \texttt{bind()} et \texttt{unbind()}. Lorsqu'un observateur transitionne de l'état détaché à l'état attaché, sa fonction de définition est invoquée afin de déterminer les signaux auxquels l'attacher.
 
-Les blocs \texttt{atomically} peuvent être nestés, auquel cas ils n'ont aucun effet hormis pour le bloc le plus extérieur. La mutation d'une source est toujours associée à un contexte de mutation, il n'est donc pas nécessaire d'en définir un explicitement lors de la modification d'une seule valeur.
+Lors de la construction d'un nouvel observateur, celui-ci est initialement \emph{attaché}, impliquant que la fonction utilisée dans sa définition est immédiatement invoquée. S'il est nécessaire de construire un observateur dans l'état \emph{détaché}, le constructeur alternatif peut être utilisé
+\begin{center}
+	\code{Observer.unbound(body: => Unit): Observer}
+\end{center}
+Dans ce cas, il sera nécessaire de l'attacher aux signaux qu'il écoute explicitement en invoquant la méthode \emph{bind} sur l'objet retourné.
 
-}
+\subsection{Contexte de mutation} \label{sec:sig-mut-context}
 
-\subsection{Contexte de mutations atomiques}
-\textit{Ce concept est relativement récent dans mon développement, il est destiné à supporter l'implémentation des observateurs et à fournir une structure de base pour les mécanismes de thread-safety.}
+Un contexte de mutation représente une mutation du graphe de signaux considérée atomique du point de vue des observateurs et des signaux différés. Tant qu'un contexte de mutation est ouvert, aucun observateur ou signal différé n'est calculé. À la place, ceux-ci sont placé en attente jusqu'à la fermeture du contexte de mutation.
 
-Un contexte de mutations est un bloc à l'intérieur duquel les changements apportés à un graphe de signaux sont appliqués de façon atomiques. Il prend la forme d'une construction de la forme:
+Un tel contexte peut être construit explicitement sous la forme
 \begin{lstlisting}
 Signal.atomically {
 	// mutations...
 }
 \end{lstlisting}
+ou implicitement en effectuant la mutation d'un signal Source. Chaque mutation d'une \texttt{Source} ouvre en effet un nouveau contexte de mutation puis le ferme immédiatement.
 
-Aucun observateur n'est invoqué jusqu'à la sortie du bloc \texttt{atomically}. Il est ainsi possible d'effectuer une série de mutations dans un graphe de signaux et de ne notifier les observateurs qu'une seule fois à la fin.
+Lorsqu'un contexte de mutation est ouvert tandis qu'un autre contexte est déjà ouvert, le contexte existant est réutilisé. Par exemple lors de la mutation d'une source dans un bloc \texttt{Signal.atomically}, le contexte enfant créé par la source sera ignoré et aucun observateur ni signal différé ne sera traité avant la fermeture du contexte extérieur.
 
-Ces blocs peuvent être imbriqués, dans ce cas, les blocs intérieurs n'ont pas d'effet et seul le bloc extérieur est considéré.
+L'intérêt de cette construction se révèle en considérant la nature récursive de l'invalidation des signaux. Lorsqu'un signal source est modifié, l'ensemble des ses signaux enfants doit être invalidé. Si l'un de ces signaux utilise la sémantique d'évaluation \emph{différée}, il est nécessaire de le recalculer. S'il possède des observateurs, il est également nécessaire de l'invoquer avant de retourner au code appelant. De plus, chaque signal enfant peut également posséder un ensemble de signaux enfants pour lesquels l'opération doit être répétée. Des structures en diamant sont également possibles, causant une double invalidation d'un signal enfant (figure \ref{fig:sig-diamond-dependencies}).
 
-Le bloc \texttt{atomically} joue aussi un rôle dans l'évaluation des signaux stricts. Ceux-ci ne sont en effet recalculés qu'une seule fois à la fin du bloc, mais avant l'invocation des observateurs. Une exception existe cependant: si l'état d'un signal strict est accédé explicitement à n'importe quel moment à l'intérieur du bloc, cet état sera calculé immédiatement.
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=2cm]{img/signals_diamond}
+	\caption{Exemple de dépendance en diamant}
+	\label{fig:sig-diamond-dependencies}	
+\end{figure}
 
-\textit{À ajouter: exemples}
+Dans de telles la situations, la présence du contexte de mutation permet d'assurer une sémantique \emph{exactly-once} pour les observateurs et les signaux différés. Un observateur n'est invoqué, ou un signal différé recalculé, qu'une seule et unique fois par contexte de mutation, lorsque celui-ci est fermé.
 
-
-\subsection{Parallélisme}
-\textit{La question du parallélisme reste ouverte pour l'instant. Deux cas à considérer:}
-\begin{enumerate}
-	\item \emph{Utilisation multi-thread d'un unique graphe de signaux}: implique une gestion correcte de la concurrence afin de garantir un état cohérent du graphe en tout temps ainsi que d'éviter de potentiels inter-blocages lors du calcul parallèle de plusieurs branches du graphe. Il est aussi important de définir clairement la sémantique des observateurs dans le contexte multi-thread. Quel est le thread exécutant l'observateur? En cas de modification concurrente, combien d'appels à l'observateur? Une invocation unique une fois le graphe stabilisé entre tous les threads? Une invocation (exactement ou au plus ?) par thread?
-	\item \emph{Signaux comme mécanisme de parallélisation}: dans cette situation le graphe de signaux est considéré comme une fonction utilisée pour paralléliser automatiquement un traitement. Une source est définie pour chaque paramètre et des transformations de signaux sont utilisées pour réaliser les étapes intermédiaires de l'algorithme. Le résultat prend la forme d'un signal unique en bas de l'arbre de dépendances. Dans une telle configuration, le calcul des signaux indépendants peut être parallélisé de façon automatique (utilisation d'un thread pool géré par le framework?). L'ensemble peut alors être exposé sous la forme d'une fonction \texttt{(A, B, C, ...) => Future[Z]}. Utilisant un observateur sur le noeud final pour résoudre les futures retournés.
-	
-	Il est de plus intéressant de noter que si le premier cas d'utilisation parallèle est implémenté avec une sémantique \emph{exactly-once} cohérente au niveau des observateurs, le graphe utilisé par la fonction peut alors être utilisé par plusieurs thread simultanément et former un \emph{pipeline} de calcul dans lequel il est possible de débuter un nouveau calcul dès lors que l'ensemble des noeuds directement dépendant des signaux sources ont été évalués. Et ainsi de suite pour les signaux de niveau suivants. Allons-nous aller jusque là?
+Plus spécifiquement, les règles suivant s'appliquent:
+\begin{enumerate}[label=\alph*]
+	\item Aucun observateur ou signal différé n'est évalué tant qu'un contexte de mutation est ouvert. Il est à la place placé dans une queue interne au contexte.
+	\item Dès lors que le contexte de mutation est fermé, l'ensemble des signaux différés en queue sont évalués et mis à jour. Ces signaux sont évalués dans l'ordre dans lequel ils ont été placés dans la queue, mais un même signal ne sera évalué qu'une seule fois.
+	\item Si un signal en queue dépend de l'état d'un autre signal différé placé après lui dans la queue, cet autre signal est évalué immédiatement et sa position dans la queue est ignorée.
+	\item Une fois l'ensemble des signaux différés évalués, les observateurs sont invoqués dans l'ordre dans lequel ils ont été ajoutés à la queue. De façon similaire aux signaux, un observateur ne sera invoqué qu'une seule et unique fois par contexte.
+	\item La fermeture du contexte est elle-même effectuée dans un nouveau contexte de mutation. Celui-ci est ouvert dès lors que le contexte parent débute sa procédure de fermeture et sera fermé une fois l'ensemble des signaux et observateurs invoqués. S'il n'y a aucun signal ni observateur en queue, un nouveau contexte n'est pas ouvert.
+	\item L'opération de fermeture ne peut pas être interrompue, une exception lancée lors de l'évaluation d'un signal ou d'un observateur interrompt l'opération en cours mais n'affecte pas les autres signaux et observateurs qui seront tout de même.
+	\item Si au moins une exception a été lancée pendant le processus de fermeture d'un contexte de mutation, une exception \footnote{De type \texttt{MutationContext.MutationException}} sera lancée à la fin de l'opération et contiendra l'ensemble des exceptions capturées. Ce mécanisme est conçu pour faciliter le \emph{debug} de l'application et son usage doit être évité. Les exceptions possibles devraient être traitées localement dans les signaux ou les observateurs.
 \end{enumerate}
 
-\textit{Il n'est pas clair quels développements seront entrepris dans le domaine du parallélisme, l'implémentation actuelle est basée sur une approche single-thread adaptée à un usage dans le navigateur. L'intérêt pour ce projet étant plus sur au niveau de la propagation automatique des mises à jour que sur le parallélisme du calcul.}
+Ces règles ont pour but de simplifier la conceptualisation du comportement d'un graphe de signaux. Chaque mutation s'accompagne au maximum d'une évaluation des observateurs et signaux différés. Cette garantie est particulièrement intéressante lors de l'utilisation de signaux utilisant la sémantique \emph{différée} puisqu'elle permet de rendre des opérations tels que \texttt{fold} indépendantes de la structure du graphe, aussi complexe soit-elle.
+
+\subsection{Parallélisme}
+
+Le parallélisme est un concept majeur dans le développement logiciel depuis que les processeurs tendent à se paralléliser plus qu'il n'accélèrent. Utiliser efficacement un processeur moderne signifie être capable de répartir les calculs à effectuer sur les multiples cœurs d'exécution qu'il met à disposition.
+
+Avec la parallélisation de l'exécution, des comportements non-déterministes apparaissent. Il n'existe plus aucune garantie concernant l'ordre dans lequel les opérations seront effectuées entre les différents fils d'exécution. Des facteurs externes tel que le système d'exploitation et les autres applications exécutée de façon concurrente par l'utilisateur se partagent tous les ressources du système et affecte l'ordonnancement des opérations.
+
+Il est alors nécessaire d'intégrer à l'application \emph{multi-threadée}, des points de synchronisation ou des verrous pour restaurer un certain nombre de garanties quant à l'ordre d'exécution des instructions. Ces mécanismes sont généralement coûteux en terme de performances et leur usage excessif peut conduire à une exécution effectivement plus lente que lors de l'utilisation d'un unique \emph{thread}. L'\emph{overhead} de la synchronisation éclipsant alors le gain de performance apporté par le parallélisme.
+
+La question se pose alors de l'utilisation des signaux dans un contexte parallèle. Dans le cadre de ce travail, les signaux ont été utilisés pour la construction de l'interface utilisateur côté client. JavaScript est un environnement \emph{single threaded} n'offrant aucun mécanisme de parallélisation \footnote{Plus spécifiquement, il n'existe pas de parallélisation avec mémoire partagée. L'environnement web défini les \emph{Web Workers} qui sont effectivement des processus concurrents, mais dont la communication avec le processus principal se fait par échange de messages et événements.}. La concurrence n'était donc pas un problème.
+
+Cependant, les signaux ne sont pas limités à la construction d'interfaces web et peuvent être utilisés pour modéliser des dépendances complexes dans un ensemble d'informations manipulées par une application possiblement parallèle. Afin d'étudier les implications de la parallélisation, deux cas d'utilisation ont été imaginés:
+\begin{enumerate}
+	\item L'utilisation \emph{multi-threadée} d'un unique graphe de signaux
+	\item L'utilisation des signaux comme mécanisme de parallélisation
+\end{enumerate}
+Une analyse théorique de ces deux situations est effectuée dans les sections ci-après. \textit{Trouver mieux comme transition...}
+
+\subsubsection{Utilisation \emph{multi-threadée} d'un unique graphe de signaux}
+
+Dans cette situation, un graphe unique de signaux est accédé parallèlement par de multiples \emph{threads} de l'application. La tâche de parallélisation est attribuée à l'utilisateur de la bibliothèque qui est alors responsable de déterminer le nombre de \emph{threads} à exécuter et leurs tâches respectives. Il attend du graphe de signaux un certain nombre de garanties:
+\begin{itemize}
+	\item Cohérence: les données stockées dans chaque nœuds du graphe doivent rester cohérentes par rapport à l'ensemble du graphe. Si un signal dépend d'un autre et que l'état de ces deux signaux est actuellement en cache, les valeurs de ces deux signaux doit correspondra à la relation qui les unis. La figure \ref{fig:sig-inconsistency} illustre une telle situation où les données en cache ne correspondent pas à la relation.
+	
+	\begin{figure}
+		\centering
+		\includegraphics[width=6cm]{img/signals_coherence.eps}
+		\caption{Signaux incohérents}
+		\label{fig:sig-inconsistency}
+	\end{figure}
+
+	Cette incohérence peut provenir d'un croisement des opérations d'invalidations et de calcul d'un signal \emph{lazy}. Si un signal d'invalidation est reçu par un nœud tandis que qu'un autre \emph{thread} est déjà en train de recalculer ce même nœud, il est possible que l'invalidation soit ignorée, malgré que le calcul soit effectué avec des données périmées.
+	
+	\item Absence d'inter-blocage: une solution pour résoudre les problèmes de cohérence est l'introduction de synchronisation et de verrous. Il est cependant important de ne pas verrouiller \emph{trop}. Si chaque accès aux signaux nécessite le verrouillage de l'ensemble du graphe, les différents fils d'exécutions se retrouveraient en attente permanente et les avantages du parallélisme seraient perdus.
+	
+	À l'inverse, dans le cas d'un verrouillage fin, nœud par nœud, il est alors important de s'assurer de l'absence d'inter-blocage, les mises à jour d'un graphe de signal pouvant être initiées parallèlement à partir de multiples nœuds.
+	
+	\begin{figure}
+		\centering
+		\includegraphics[width=2.5cm]{img/signals_interblock.eps}
+		\caption{Situation d'inter-blocage potentielle}
+		\label{fig:sig-interblock}
+	\end{figure}
+
+	La figure \ref{fig:sig-interblock} illustre une telle situation. Si le signal \emph{c}, en étant calculé, verrouille le signal \emph{a} tandis que le signal \emph{d} verrouille le signal \emph{b} de façon concurrente, les deux signaux se retrouvent bloqués en attente du second signal nécessaire à leur évaluation.
+	
+	Une solution potentielle à cette situation est d'imposer un ordre dans l'acquisition des verrous entre les signaux, par exemple sur la base du \texttt{hashCode} de l'objet signal étant verrouillé. La question de savoir si cela est suffisant pour garantir l'absence d'inter-blocage dans le graphe n'a pas été approfondie.
+	
+	\item Sémantique des observateurs: dans une situation non-parallèle, un observateur est invoqué \emph{exactement une fois} lors de la fermeture du contexte de mutation et avant le retour au code utilisateur ayant initié la mutation. Que faire lorsque de multiples nœuds sont mis à jour de façon parallèle avec des observateurs attachés ? 
+	
+	Faut-il exécuter l'observateur une fois par mutation, avec des données potentiellement périmées ? Faut-il plutôt différé l'exécution de l'observateur jusqu'à ce que l'ensemble du graphe soit stabilisé ? Dans ce cas, quel \emph{thread} est responsable d'invoquer l'observateur ? Que faire si le graphe ne se stabilise jamais, c'est à dire
+	que des modifications sont continuellement apportées aux données, l'observateur se retrouverait alors différé indéfiniment ?
+	
+	La problématique est identique en ce qui concerne les signaux différés puisqu'ils partage leur sémantique d'évaluation avec les observateurs. Est-ce que cela a toujours un sens dans un environnement parallèle ou est-il nécessaire d'établir des règles supplémentaires, spécifiques aux signaux différés.
+\end{itemize}
+
+Toutes ces questions attestent de la difficulté d'établir des règles d'évaluation claires et simples dans un contexte \emph{multi-threadé}. Ce qui correspond à un cas d'utilisation peut ne pas être adapté à un autre.
+
+Les approches les plus simples, comme par exemple exécuter les observateurs une fois par mutation sur le \emph{thread} ayant initié la mutation et sans se préoccuper d'exposer des données périmées dans le graphe, sont les plus simples à implémenter mais également les moins utiles pour le développeur. Les approches plus strictes, plus utiles au développeur, sont également plus complexes à implémenter. L'impact sur les performances est également à considérer.
+
+\subsubsection{Utilisation des signaux comme mécanisme de parallélisation}
+
+Une approche alternative de la question du parallélisme consiste à se servir du graphe de signaux comme primitive de parallélisation. Dans ce cas, ce n'est plus le développeur qui est responsable de paralléliser son application, mais la bibliothèque de signaux. L'objectif est alors de calculer automatiquement les différents nœuds du graphe de façon concurrente.
+
+Une approche possible serait de modifier la signature des méthodes d'accès à l'état d'un signal pour retourner des instances de \texttt{Future}. En utilisant le mécanisme d'\texttt{ExecutionContext} de la bibliothèque Scala, la gestion du \emph{thread pool} est déléguée à la plateforme, tout en laissant au développeur la possibilité de configurer son fonctionnement si nécessaire.
+
+En ce qui concerne les observateurs, une approche intéressante serait d'associer à chaque mutation une invocation des observateurs, au cours de laquelle le graphe est dans un état cohérent à la suite de cette mutation. L'objectif est ici de pouvoir utiliser un graphe de signaux comme implémentation d'une fonction de la forme \texttt{(A, B, C, ...) => Future[Z]}.
+
+Une telle fonction serait construite autour d'un graphe disposant d'une source par paramètre et d'un signal feuille exprimant la valeur de retour par transformation des signaux sources, potentiellement avec des nombreux niveaux de signaux intermédiaires. L'ensemble des sources seraient alors mises à jour de façon atomique, provoquant une mise à jour de l'ensembles des signaux du graphe puis une invocation d'un observateur attaché au nœud feuille. La figure \ref{fig:sig-pipeline} présente un exemple de ce concept.
+
+\begin{figure}[h]
+	\begin{lstlisting}
+val A = Source.undefined[String]
+val B = Source.undefined[Int]
+// ... signaux intermédiaires
+val Z = Signal { ... }
+
+def foo(a: String, b: Int): Future[Boolean] = {
+	val p = new Promise[Boolean]
+	Signal.atomically {
+		A := a
+		B := b
+		Observer.once(Z) { res => p.resolve(res) }
+	}
+	p.future
+}
+	\end{lstlisting}
+	\caption{Exemple d'utilisation d'un graphe de signaux comme mécanisme de parallélisation}
+	\label{fig:sig-pipeline}
+\end{figure}
+
+Les deux approches peuvent également être combinées. Si l'observateur invoqué sur le nœud feuille observe un état cohérent du graphe même dans le cas d'invocations concurrentes, le graphe fonctionne alors comme un \emph{pipeline} d'évaluation où les données sont propagées le long des signaux jusqu'à attendre le nœud feuille avec la possibilité de débuter un nouveau calcul au niveau des racines tandis que le premier n'a pas encore atteint l'extrémité du graphe. D'une façon, dès lors que tous les enfants d'un signal ont été calculés, il est possible de débuter un nouveau calcul au niveau de ce signal.
+
+Par exemple, dans la structure en diamant de la figure \ref{fig:sig-diamond-dependencies}, le signal \emph{D} dépend indirectement de la valeur de \emph{A}. Cependant, une fois que les valeurs de \emph{B} et \emph{C} ont été calculées, le signal \emph{A} peut être réutilisé pour le prochain calcul sans affecter le calcul de \emph{D} puisque la valeur correcte, de son point de vue, de \emph{A} a été \emph{capturée} dans les valeur de \emph{B} et \emph{C}. Une fois le calcul de \emph{D} terminé, les signaux \emph{B} et \emph{C} peuvent à leur tour être réutilisés pour le prochain calcul, sans attendre la fin de la propagation.

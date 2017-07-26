@@ -1,0 +1,6 @@
+@startuml
+!include prelude.iuml
+
+(A = 2) -> (B = 6) : " b = a.map( _ * 2 )"
+
+@enduml

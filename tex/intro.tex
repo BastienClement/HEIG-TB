@@ -2,21 +2,21 @@
 
 De plus en plus d'activités sociales sont supportées par des technologies de l'information. Les applications web deviennent des médiateurs d'interactions sociales entre personnes, comme par exemple les réseaux sociaux. Des groupes de personnes se rencontrent dans le cyberespace pour s'échanger et poursuivre leurs loisirs. Ces interactions ne sont plus seulement asynchrones, mais deviennent synchrones, par exemple dans le cas des jeux vidéo en ligne. Des groupes de personnes relativement importants se réunissent pour jouer ensemble. Certains jeux nécessitent un haut degré de collaboration entre les membres d'un groupe. Cette collaboration peut être facilité par une application de gestion collaborative.
 
-Les technologies web évoluent très rapidement coté client (navigateur) et permettent de développer des applications de plus en plus interactives et temps réel. Notamment les frameworks récents comme ReactiveX offrent un nouveau paradigme de programmation réactive qui simplifie considérablement le développement d'applications hautement interactives.
+Les technologies web évoluent très rapidement coté client (navigateur) et permettent de développer des applications de plus en plus interactives et temps réel. Les frameworks récents, comme ReactiveX notamment, offrent un nouveau paradigme de programmation réactive qui simplifie considérablement le développement d'applications hautement interactives.
 
 \section{Programmation réactive-fonctionnelle}
 
 La programmation réactive-fonctionnelle combine programmation fonctionnelle et programmation réactive.
 
-Ce premier paradigme, fonctionnel, met en avant l'utilisation de structure de données immutables et de l'application de fonctions sur ses structures afin d'en dériver de nouvelles. Les effets de bords et les états globaux sont évités par l'utilisation de fonctions pures ne dépendant que de leurs paramètres. Les principes de composabilité des fonctions et de transparence référentielle qui en découlent sont alors mis en avant pour promouvoir un style de programmation qui se veut plus clair et avec moins d'effets surprenant pour le développeur.
+Ce premier paradigme, fonctionnel, met en avant l'utilisation de structures de données immutables et de l'application de fonctions sur ces structures afin d'en dériver de nouvelles. Les effets de bords et les états globaux sont évités par l'utilisation de fonctions pures ne dépendant que de leurs paramètres. Les principes de composabilité des fonctions et de transparence référentielle qui en découlent sont alors mis en avant pour promouvoir un style de programmation qui se veut plus clair et avec moins d'effets surprenants pour le développeur.
 
-La programmation réactive quant à elle prône une approche basée en premier lieu sur les données sources utilisées par l'application, les transformations qui leur sont appliquées et le maintient d'un état cohérent dans l'ensemble du logiciel lors des changements d'états du système.
+La programmation réactive, quant à elle, prône une approche basée en premier lieu sur les données sources utilisées par l'application, les transformations qui leur sont appliquées et le maintient d'un état cohérent dans l'ensemble du logiciel lors des changements d'états du système.
 
-Dans l'approche mixte réactive-fonctionnelle, les sources de données réactives sont manipulées comme des structures fonctionnelle classiques et des fonctions, pures, leur sont appliquées afin de produire de nouvelles données réactive dérivée. Une relation de dépendance existe entre la donnée réactive produite en résultat de la fonction et la donnée source utilisée. L'objectif du système réactif-fonctionnel est alors de garantir qu'en cas de modification de la donnée source, les données dérivées soient correctement mises à jour par une réapplication de la fonction utilisée en premier lieu.
+Dans l'approche mixte réactive-fonctionnelle, les sources de données réactives sont manipulées comme des structures fonctionnelle classiques et des fonctions, pures, leur sont appliquées afin de produire de nouvelles données réactives dérivées. Une relation de dépendance existe entre la donnée réactive produite en résultat de la fonction et la donnée source utilisée. L'objectif du système réactif-fonctionnel est alors de garantir qu'en cas de modification de la donnée source, les données dérivées soient correctement mises à jour par une réapplication de la fonction utilisée en premier lieu.
 
 \section{Objectifs}
 
-Ce travail a pour objectif le développement d'une application web hautement interactive avec le langage de programmation Scala, basée sur les principes de la programmation réactive-fonctionnelle et intégrant une gestion précises et temps-réel des interactions entres ses utilisateurs, dans le but de permettre l'organisation d'un groupe de joueurs dans un jeu en ligne multi-joueurs.
+Ce travail a pour objectif le développement d'une application web de démonstration, hautement interactive, en utilisant le langage de programmation Scala et les principes de la programmation réactive-fonctionnelle avec une gestion précises et temps-réel des interactions entre ses utilisateurs.
 
 Dans cette optique, une bibliothèque réactive-fonctionnelle -- Xuen -- sera développée en premier lieu afin de fournir les composants de base utilisés dans la construction de l'application: \emph{signaux}, \emph{templates} et \emph{data-binding}. L'accent sera mis sur le développement d'une bibliothèque générique et réutilisable, indépendante de l'application finale.
 
@@ -24,9 +24,9 @@ Dans cette optique, une bibliothèque réactive-fonctionnelle -- Xuen -- sera d�
 
 \subsection{Web Components}
 
-\emph{Web Components} un ensemble d'extensions aux spécifications HTML et DOM destinées à permettre le développement de composants isolés et réutilisables pour la construction de page web, de façon simple et portable grâce au support natif de la technologie dans les navigateur modernes.
+\emph{Web Components} est un ensemble d'extensions aux spécifications HTML et DOM destinées à permettre le développement de composants isolés et réutilisables pour la construction de pages web, de façon simple et portable grâce au support natif de la technologie dans les navigateur modernes.
 
-Le nom \emph{Web Components} regroupe en réalité un ensemble de quatre technologies distinctes, dont le support varie selon le navigateurs utilisé:
+Le nom \emph{Web Components} regroupe en réalité un ensemble de quatre technologies distinctes, dont le support et la qualité de l'implémentation varie selon le navigateur utilisé:
 \begin{enumerate}
 	\item Templates
 	\item HTML Imports
@@ -64,13 +64,13 @@ Les bugs mentionnés pour l'implémentation de \emph{Shadow DOM v1} par Safari c
 
 \subsubsection{Templates}
 
-Cette extension ajoute la balise \texttt{<template>} au standard HTML. Son objectif est d'offrir aux développeur un mécanisme permettant l'inclusion de fragments de page dans un document HTML sans que celui-ci ne soit exécuté, il est alors dit \emph{inerte}.
+Cette extension ajoute la balise \texttt{<template>} au standard HTML. Son objectif est d'offrir aux développeurs un mécanisme permettant l'inclusion de fragments de page dans un document HTML sans que celui-ci ne soit exécuté, il est alors dit \emph{inerte}.
 
-Comme exemple, sans cet élément, une image avec un attribut \texttt{src} était immédiatement téléchargée par le navigateur. Dans une application web utilisant le framework Angular 1, il était alors fréquent de voir des images déclarée en utilisant l'attribut spécial \texttt{ng-src} qui était ensuite transformé en simple \texttt{src} une fois l'évaluation de l'expression de \emph{databinding} par le framework. Sans cela, le navigateur aurait tenté de charger une image à l'adresse "\texttt{\{\{imgSrc\}\}}", résultant en une erreur avant que le framework Angular puisse avoir l'occasion d'évaluer l'expression et de modifier l'attribut.
+Comme exemple, sans cet élément, une image avec un attribut \texttt{src} était immédiatement téléchargée par le navigateur. Dans une application web utilisant le framework Angular 1, il était alors fréquent de voir des images déclarées en utilisant l'attribut spécial \texttt{ng-src} qui était ensuite transformé en simple attribut \texttt{src} une fois l'évaluation de l'expression de \emph{databinding} par le framework. Sans cela, le navigateur aurait tenté de charger une image à l'adresse "\texttt{\{\{imgSrc\}\}}", résultant en une erreur avant que le framework Angular puisse avoir l'occasion d'évaluer l'expression et de modifier l'attribut.
 
 Avec l'élément \texttt{<template>}, son contenu est \emph{parsé} et transformé en structure de noeuds DOM de façon similaire à n'importe quel autre élément, mais leurs effets ne sont pas exécutés: les images ne sont pas chargées, les scripts pas exécutés, les styles pas appliqués, etc.
 
-Le contenu de cet élément est ensuite cloné de façon dynamique au \emph{runtime} par un script puis inséré sous un autre noeud du document en utilisant les APIs du DOM. Ce contenu sera alors exécuté de façon habituelle. Un même template peut également être cloné et inséré plusieurs fois, permettant la factorisation de code répété à travers un document HTML.
+Le contenu de cet élément est ensuite cloné de façon dynamique au \emph{runtime} par un script, puis inséré sous un autre noeud du document en utilisant les APIs du DOM. Ce contenu sera alors exécuté de façon habituelle. Un même template peut également être cloné et inséré plusieurs fois, permettant la factorisation de code répété à travers un document HTML.
 
 \subsubsection{HTML Imports}
 
@@ -84,13 +84,13 @@ Dans le cadre de ce travail, cette partie des Web Components ne sera pas utilis�
 
 \subsubsection{Custom Elements}
 
-Cette technologie introduit une API pour la définition de nouveau élément DOM. En pratique, cela se traduit par la capacité à créer de nouvelle balise qui seront reconnue par le navigateur et d'y associer des comportements spécifiques lors de son instantiation, attachement ou détachement du document.
+Cette technologie introduit une API pour la définition de nouveau élément DOM. En pratique, cela se traduit par la capacité à créer de nouvelles balises qui seront reconnue par le navigateur et d'y associer des comportements spécifiques lors de son instanciation, attachement ou détachement du document.
 
-Les réponses du composants aux interactions de l'utilisateurs se font quant à elles sur la base des événements classiques disponibles en JavaScript: par exemple enregistrement d'un gestionnaire pour l'événement \texttt{click} ou \texttt{keydown} sur l'élément, tel qu'il serait fait pour un simple élément \texttt{<div>}.
+Les réponses du composants aux interactions de l'utilisateur se font quant à elles sur la base des événements classiques disponibles en JavaScript: par exemple enregistrement d'un gestionnaire pour l'événement \texttt{click} ou \texttt{keydown} sur l'élément, tel qu'il serait fait pour un simple élément \texttt{<div>}.
 
 La spécification prévoit également la possibilité d'étendre une balise existante selon une forme d'héritage. Il est ainsi possible de définir un type de bouton personnalisé, qui hériterait du comportement standard d'un bouton mais qu'il serait alors possible d'altérer. En pratique, cette fonctionnalité n'est pas encore supportée par les navigateurs.
 
-La définition de nouvelle balise est un concept clé de ce travail puisque chaque composant créé en Scala.js sera instancié par l'utilisation de sa balise associée dans le template d'un autre élément. En revanche, l'extension d'éléments existant ne sera pas exploité. Il est en effet trivial d'atteindre un effet similaire en définissant un nouvel élément contenant l'élément à altérer dans son sous-arbre DOM.
+La définition de nouvelle balise est un concept clé de ce travail puisque chaque composant créé en Scala.js sera instancié par l'utilisation de sa balise associée dans le template d'un autre élément. En revanche, l'extension d'éléments existants ne sera pas exploité. Il est en effet trivial d'atteindre un effet similaire en définissant un nouvel élément contenant l'élément à altérer dans son sous-arbre DOM.
 
 \subsubsection{Shadow DOM}
 
@@ -99,7 +99,7 @@ Probablement la spécification la plus complexe d'un point de vue implémentatio
 \begin{itemize}
 	\item les styles CSS déclarés hors du sous-arbre ne s'appliquent pas aux éléments du sous-arbre et inversement pour les styles déclarés dans le sous-arbre;
 	
-	\item les identifiants HTML (attributs \texttt{id}), en principe unique dans un document, peuvent être réutilisés dans un sous-arbre;
+	\item les identifiants HTML (attributs \texttt{id}), en principe uniques dans un document, peuvent être réutilisés dans un sous-arbre;
 	
 	\item les fonctions \texttt{getElementById} ou \texttt{querySelector} dépendent de l'élément depuis lequel elles sont appelées et ne peuvent pas traverser une frontière formée par un sous-arbre;
 	
@@ -118,18 +118,18 @@ Scala.js est aussi une option intéressante lorsque le langage Scala est utilis�
 
 Une attention particulière a été portée à respecter la sémantique d'exécution de la JVM, les différences entre les plateformes sont généralement invisibles pour le développeur et un code source identique s'exécute correctement et sans modification sur les deux plateformes.
 
-Le projet est à présent bien intégré dans l'écosystème Scala: de nombreuses bibliothèques sont \emph{cross-compilées} à la fois pour la plateforme Java et pour JavaScript et le projet est considéré stable pour une utilisation en production depuis plusieurs années. Le support de multiples plateforme d'exécution pour le langage Scala est renforcé par le développement récent de Scala Native \cite{scalanative} visant la génération de code natif à partir de sources Scala en utilisant le compilateur LLVM \cite{llvm}.
+Le projet est à présent bien intégré dans l'écosystème Scala: de nombreuses bibliothèques sont \emph{cross-compilées} à la fois pour la plateforme Java et pour JavaScript et le projet est considéré stable pour une utilisation en production depuis plusieurs années. Le support de multiples plateformes d'exécution pour le langage Scala est renforcé par le développement récent de Scala Native \cite{scalanative} visant la génération de code natif à partir de sources Scala en utilisant le compilateur LLVM \cite{llvm}.
 
 \subsection{Limitations actuelles}
 
-Les \emph{Web Components} sont une technologies \emph{cutting edge}. Très récemment standardisées, son support par les différents navigateurs laisse encore beaucoup à désirer. De plus, la spécification bâtit sur les bases du langage \emph{ECMAScript 2015} (ES6), la dernière version du langage JavaScript. Il est par exemple nécessaire de déclarer une \emph{classe}\footnote{Construction introduite avec la version ES6} JavaScript pour implémenter le comportement d'un élément personnalisé, par opposition à une simple fonction constructeur tel qu'il était le cas dans la version antérieur du standard. L'utilisation d'ES6 devient donc obligatoire, malgré que son support actuel soit toujours très variable entre les différents navigateurs.
+Les \emph{Web Components} sont une technologie \emph{cutting edge}. Très récemment standardisée, son support par les différents navigateurs laisse encore beaucoup à désirer. De plus, la spécification bâtit sur les bases du langage \emph{ECMAScript 2015} (ES6), la dernière version du langage JavaScript. Il est par exemple nécessaire de déclarer une \emph{classe}\footnote{Construction introduite avec la version ES6} JavaScript pour implémenter le comportement d'un élément personnalisé, par opposition à une simple fonction constructeur tel que c'était le cas dans la version antérieure du standard. L'utilisation d'ES6 devient donc obligatoire, malgré que son support actuel soit toujours très variable entre les différents navigateurs.
 
-Heureusement, le compilateur Scala.js possède une option lui indiquant de produire du code JavaScript ES6 plutôt que la version plus répandue ES5. Lorsque cette option est activée, le compilateur utilise extensivement les nouveaux mécanismes du langage ES6, notamment les classes, et permet la définition d'élément personnalisé conformément aux standards.
+Heureusement, le compilateur Scala.js possède une option lui indiquant de produire du code JavaScript ES6 plutôt que la version plus répandue ES5. Lorsque cette option est activée, le compilateur utilise extensivement les nouveaux mécanismes du langage ES6, notamment les classes, et permet la définition d'éléments personnalisés conformément aux standards.
 
 Cette option introduit cependant une série de complications:
 
 \begin{itemize}
-	\item Le support du mode ES6 de Scala.js est considéré expérimental. En pratique, la génération de code ne semble pas être un problème et le code produit s'exécute parfaitement avec le navigateur Google Chrome. En revanche, Firefox semble avoir quelques problèmes avec des structures pourtant standards.
+	\item Le mode ES6 de Scala.js est encore considéré comme expérimental. En pratique, la génération de code ne semble pas être un problème et le code produit s'exécute parfaitement avec le navigateur Google Chrome. En revanche, Firefox semble avoir quelques problèmes avec des structures pourtant standards.
 	\item L'optimisateur de Scala.js est construit sur la base du \emph{Closure Compiler} \cite{closure-compiler}, un compilateur \emph{Javascript-to-Javascript} de Google dont la tâche est d'optimiser et compresser le code JavaScript traité. Cependant, celui-ci ne supporte pas encore ES6. Le compilateur Scala.js tend à produire des noms de fonctions et variables particulièrement longs, ce qui gonfle rapidement le taille du fichier final si l'optimisateur ne peut pas effectuer son travail.
 	\item L'option n'affecte que la génération finale du fichier JavaScript. Lorsqu'une bibliothèque Scala.js est publiée, celle-ci contient à la place des fichiers \emph{.sjsir}, une représentation intermédiaire pour le compilateur Scala.js. Ces fichiers seront alors utilisés pour construire l'unique fichier \emph{.js} lors du processus de compilation de l'application finale. Il est ainsi nécessaire que le support d'ES6 soit activé explicitement par l'utilisateur de la bibliothèque, ce qui peut compliquer légèrement son intégration dans un projet existant.
 \end{itemize}

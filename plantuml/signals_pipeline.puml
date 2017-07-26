@@ -1,0 +1,14 @@
+@startuml
+!include prelude.iuml
+
+(A)
+(B)
+(C)
+(D)
+
+A --> B
+A --> C
+C --> D
+B --> D
+
+@enduml

@@ -12,34 +12,36 @@ La figure \ref{sec:sig-hierarchy} présente la hiérarchie formée par les diff�
 	\label{fig:sig-hierarchy}
 \end{figure}
 
-\textit{Chaque trait entre Signal et la classe finale d'implémentation précise une sémantique indéfinie sur trait supérieur et ajoute une nouvelle méthode à définir par les types inférieurs:}
+L'implémentation des signaux est organisée sur la base du raffinement successif de la sémantique d'un signal. Chaque niveau laisse généralement un point de sa sémantique indéfini, sous la forme d'une méthode abstraite à implémenter par les sous-classes.
+
 \begin{itemize}
-	\item \texttt{Signal}: fonction \texttt{def option: T} indéfinie. Doit retourner la valeur courante du signal.
-	\item \texttt{Immutable}: redéfini \texttt{option} en \texttt{val} puisque l'état est immutable.
+	\item \texttt{Signal}: la vue la plus générale d'un signal, ce trait défini les méthodes de transformation et d'accès à l'état du signal. La fonction \texttt{def option: T} est indéfinie et doit retourner l'état courante du signal.
+	\item \texttt{Immutable}: redéfini \texttt{option} en \texttt{val} puisque l'état est immutable, mais laisse la valeur abstraite.
 	\item \texttt{Constant}: défini \texttt{val option = Some(value)}
 	\item \texttt{Undefined}: défini \texttt{val option = None}
-	\item \texttt{Mutable}: déclare la méthode abstraite \texttt{def current: Option[T]}, représentant également l'état du signal mais dont le nom indique clairement la sémantique mutable.
+	\item \texttt{Mutable}: déclare la méthode abstraite \texttt{def current: Option[T]}, représentant également l'état du signal mais dont le nom indique clairement la mutabilité du signal.
 	
-	Défini la méthode \texttt{option} en se basant sur \texttt{current} mais y ajoute la détection automatique des signaux enfants. De cette façon toutes les méthodes de \texttt{Signal} en utilisant \texttt{current} obtiennent également les mécanisme de détection.
+	Défini la méthode \texttt{option} en se basant sur \texttt{current} mais y ajoute la détection automatique des signaux enfants. De cette façon, toutes les méthodes de \texttt{Signal}, en utilisant directement ou indirectement \texttt{option}, obtiennent également les mécanismes de détection.
 	
-	Défini la méthode \texttt{notifyChildren()} utilisée pour signaler aux signaux enfants un changement d'état du signal.
+	\item \texttt{Source}: défini une variable interne pour stocker l'état de la source, implémente \texttt{current} sur la base de cette variable.
 	
-	\item \texttt{Child}: Déclare une méthode abstraite \texttt{generate} et une méthode abstraite \texttt{notify} qui sera appelée par \texttt{notifyChildren} de \texttt{Mutable}.
+	Ajoute également les opérations de mutation explicites.
 	
-	\item \texttt{Strict}: Défini une \texttt{var} contenant l'état courant.
+	\item \texttt{Child}: déclare la méthode abstraite \texttt{def generate: Option[T]}, appelée lorsque l'état du signal doit être calculé. Implémente \texttt{current} sur la base de \texttt{generate} et y ajoute le mécanisme de \emph{memoization}.
 	
-	Implémente \texttt{current} sur la base de cette variable.
+	Défini la méthode \texttt{def invalidate(): Unit} qui permet d'effacer l'état mémorisé du signal et d'invalider récursivement tous les signaux enfants. Cette méthode est en principe appelée par \texttt{Mutable}.
 	
-	Implémente \texttt{notify} en appelant \texttt{compute} pour définir l'état courant.
+	\item \texttt{Lazy}: trait \emph{marqueur}, l'implémentation de \texttt{Child} utilise déjà la sémantique \emph{lazy} par défaut. Il n'y a donc rien à modifier.
 	
-	\item \texttt{Lazy}: Défini une \texttt{var} contenant l'état courant. Contrairement à \texttt{Strict}, c'est un \texttt{Option[T]} pouvant indiquer l'absence d'état calculé.
-
-	Implémente \texttt{current} sur la base de cette variable, appel \texttt{generate} si elle est \texttt{None}.
+	\item \texttt{Deferred}: surcharge la méthode \texttt{invalidate} définie par \texttt{Child} en insérant le signal dans la queue du contexte de mutation courant. De cette façon, ce signal sera recalculé de façon différée à la fermeture du contexte de mutation.
 	
-	Implémente \texttt{notify} en réinitialisant la variable d'état à \texttt{None}
-	\item \texttt{Expression}: Implémente \texttt{generate} sur la base de l'expression fournie
+	\item \texttt{Expression}: implémente \texttt{generate} sur la base de l'expression passée en paramètre.
+	
+	\item \texttt{LazyExpr}: combine \texttt{Expression} avec \texttt{Lazy}
+	\item \texttt{DeferredExpr}: combine \texttt{Expression} avec \texttt{Deferred}
 \end{itemize}
-\textit{À faire: formatage et rédaction}
+
+Les classes \texttt{LazyExpr} et \texttt{DeferredExpr} sont privées. S'il est nécessaire dans le code utilisateur de déterminer la sémantique d'une expression, un \emph{pattern matching} sur les traits \texttt{Lazy} et \texttt{Deferred} peut être effectué. Il est également possible de tester si un signal est une expression constante avec l'opérateur \texttt{with}, sous la forme: \code{case e: Expression with Lazy}.
 
 \subsection{Détection automatique des dépendances}
 \textit{Cette classe est un concept récent, donc l'implémentation n'est pas encore réalisée:}
