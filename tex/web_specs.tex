@@ -198,13 +198,29 @@ class HelloWorld extends Element(HelloWorld) {
 
 En pratique, une déclaration \texttt{property[T]} correspond à la construction d'une \texttt{Source.undefined[T]}. Cependant, l'usage de \texttt{property} souligne l'usage attendu de la source en tant que paramètre de l'élément.
 
-\subsubsection{Événements personnalisés}
-
-\textit{Méthodes simplifiée pour le traitement d'événement personnalisés dans un Element.}
-
 \subsubsection{Événements \texttt{xuen:connected} et \texttt{xuen:disconnected}}
 
-\textit{Custom events lors de la connexion / déconnexion d'un élément}
+La spécification \emph{Custom Elements} définis deux méthodes particulières qui sont invoquées lorsque l'élément est connecté ou déconnecté du document \footnote{Un élément est considéré comme \emph{connecté} lorsqu'il est un enfant de l'objet \texttt{Document}. \emph{Déconnecté} dans le cas inverse. En d'autres termes, un élément présent dans la structure DOM d'une page est \emph{connecté} tandis qu'un élément ne pouvant être accédé que par une référence JavaScript est \emph{déconnecté}.}: \texttt{connectedCallback} et \texttt{disconnectedCallback}.
+
+Puisqu'il n'existe pas de \emph{destructeurs} pour un object JavaScript, contrairement à C++ par exemple, le callback de déconnexion est la meilleure opportunité pour un composant d'effectuer des opérations de nettoyage. Cependant, toutes les déconnexions ne sont pas permanentes et l'élément peut tout à fait être réinséré dans l'arbre du document par la suite. Il peut alors être nécessaire de rétablir les ressources libérées lors de la déconnexion.
+
+Lorsque le système se complexifie, il peut arriver qu'un composant alloue une ressource \emph{à l'intention} d'un autre composant. Celui-ci est alors intéressé de savoir quand libérer cette ressource, c'est à dire lorsque cet élément est \emph{connecté} ou \emph{déconnecté} du document.
+
+Dans l'approche utilisée par le standard, l'élément est le seul récepteur possible des événements et décide les actions à entreprendre. Un composant tiers ne peut pas être averti de ces événements si l'élément ne le prévoit pas. Xuen implémente une approche différente en déclarant les méthodes \texttt{connectedCallback} et \texttt{disconnectedCallback} comme \texttt{final} dans la classe \texttt{Element}. Il n'est alors plus possible d'y ajouter d'avantages d'opérations que celles définies par la bibliothèque, y compris pour l'élément lui-même.
+
+À la place, Xuen défini deux événements particuliers \texttt{xuen:connected} et \texttt{xuen:disconnected} qui sont émis par l'élément lorsque les callbacks standards sont invoqués. De cette façon, un nombre illimité de composant peuvent écouter ces événements et être averti du cycle de vie de l'élément. L'élément lui-même peut également s'enregistrer sur ces événements afin d'effectuer d'avantage d'opérations lors de sa propre connexion ou déconnexion. La figure \ref{fig:web-spec-event-disconnected} présente un exemple d'utilisation de l'événement par l'élément lui-même.
+
+\begin{figure}[h]
+	\begin{lstlisting}
+class HelloWorld extends Element(HelloWorld) {
+	this.addEventListener("xuen:disconnected", { _ =>
+		// Libération de ressources attribuée par l'élément
+	})
+}
+	\end{lstlisting}
+	\caption{Exemple d'utilisation de l'événement \texttt{xuen:disconnected}}
+	\label{fig:web-spec-event-disconnected}
+\end{figure}
 
 \subsection{Template} \label{sec:web-specs-template}
 
@@ -443,4 +459,24 @@ Les variables CSS sont la méthodes préférée pour paramétrer l'apparence d'u
 
 \subsection{Service}
 
-\subsection{Router}
+Le concept de Service est utilisé lorsqu'un objet doit être partagé entre plusieurs composants de l'application. Celui-ci est alors créé en tant qu'objet singleton étendant la classe \texttt{x.s.Service}.
+\begin{lstlisting}
+object MyService extends Service {
+	...
+}
+\end{lstlisting}
+
+Un service peut alors être \emph{utilisé} par un élément en appelant la méthode \texttt{Service.use} qui retourne le service passé en paramètre.
+\begin{lstlisting}
+class HelloWorld extends Element(HelloWorld) {
+	val service = Service.use(MyService)
+}
+\end{lstlisting}
+
+En interne, un service possède un compteur du nombre d'éléments actuellement \emph{connectés} qui utilisent le service. Dès lors que ce compteur est non-nul, le service est \texttt{activé}. Lorsqu'il est décrémenté à 0, le service est \emph{désactivé}. Ceci se traduit en l'invocation des méthodes \texttt{enable} et \texttt{disable} qui doivent avoir été implémentée par le service.
+
+En pratique, la désactivation d'un service est différée de 5 secondes par rapport à la déconnexion du dernier élément afin de laisser l'occasion à un nouvel élément utilisant le service d'être connecté dans l'intervalle et éviter ainsi un cycle désactivation-activation, par exemple lors de la navigation entre plusieurs vues de l'application.
+
+Le concept de service a pour objectif principal de permettre l'implémentation de sources de données pour les composants. Ceux-ci utilisent le service fournissant les informations dont ils ont besoin et le service est en mesure de récupérer ces informations depuis le serveur de façon centralisée entre tous les composants de l'application. Plus spécifiquement, le mécanisme d'activation et désactivation du service a pour but d'offrir à son implémentation une chance de signaler au serveur que les événements de mises à jour des données qu'il fourni l'intéressent ou ne l'intéressent plus.
+
+L'utilisation de la fonction \texttt{Service.use} est indispensable. Celle-ci utilise en effet une référence implicite à l'élément à l'origine de l'invocation et se charge d'enregistrer des gestionnaires pour les événements \texttt{xuen:connected} et \texttt{xuen:disconnected}, fondamentaux au fonctionnement du mécanisme d'activation à la demande des services.
