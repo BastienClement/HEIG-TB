@@ -11,16 +11,16 @@
 L'implémentation du framework web de Xuen peut être décomposé en 3 grandes parties, tel qu'illustré par la figure \ref{fig:web-overview}.
 
 \begin{enumerate}
-	\item Le partie \emph{front-end} est exposée directement au développeur. Elle est utilisée pour déclarer les composants personnalisés de l'application, leurs comportements et structure.
-	\item La partie \emph{back-end} est utilisée par le framework lorsqu'un élément est instancié dans le document. Elle fourni les outils nécessaire à l'implémentation des comportements dynamiques du template de cet élément et l'interface avec le système de signaux par le biais des expressions.
-	\item Finalement le système de compilation est utilisé lors de la définition d'un nouveau composant pour transformer le code source HTML du template en une instance de la classe \texttt{Template}, encapsulant à la fois une structure pré-traitée du template, des modèles pour construire les comportements dynamique de ce template et des expressions sous forme d'arbres syntaxique prêt à être interprétés.  
+	\item La partie \emph{front-end} est exposée directement au développeur. Elle est utilisée pour déclarer les composants personnalisés de l'application, leurs comportement et structure.
+	\item La partie \emph{back-end} est utilisée par le framework lorsqu'un élément est instancié dans le document. Elle fournit les outils nécessaires à l'implémentation des comportements dynamiques du template de cet élément et l'interface avec le système de signaux par le biais des expressions.
+	\item Finalement le système de compilation est utilisé lors de la définition d'un nouveau composant pour transformer le code source HTML du template en une instance de la classe \texttt{Template}, encapsulant à la fois une structure pré-traitée du template, des modèles pour construire les comportements dynamiques de ce template et des expressions sous forme d'arbres syntaxiques prêts à être interprétés.  
 \end{enumerate}
 
 L'objectif de la partie de compilation est de réduire l'impact du traitement du template au \emph{runtime}. En effet, l'instanciation d'un template se base sur les outils fournis par le navigateur, notamment le parser HTML et son implémentation du DOM afin parcourir et traiter la structure fournie sous forme de code HTML.
 
 En compilant le template et les expressions dès la déclaration, il n'est plus nécessaire de le faire lors de l'instanciation, ce qui permet un investissement fixe au chargement de l'application et des performances accrues lors de son fonctionnement.
 
-Cette structure est en grande partie reprise d'un projet personnel antérieur. La plupart des éléments ont été repensés et réimplémentés, principalement pour les adapter au nouveaux standards \emph{Web Components} version \emph{v1} (par opposition à la version antérieur \emph{v0}). Le parser d'expression a quant à lui été récrit, passant d'une implémentation fortement inspirée du parser d'expression du framework Angular 2, mais en Scala, à une version développée avec la bibliothèque \emph{scala-parser-combinators} \cite{scala-parser-combinators}, plus propre et idiomatique. La grammaire du langage n'a cependant pas été significativement modifiée. L'optimisateur d'expressions est réutilisé pratiquement tel-quel.
+Cette structure est en grande partie reprise d'un projet personnel antérieur. La plupart des éléments ont été repensés et réimplémentés, principalement pour les adapter au nouveaux standards \emph{Web Components} version \emph{v1} (par opposition à la version antérieure \emph{v0}). Le parser d'expression a quant à lui été réécrit, passant d'une implémentation fortement inspirée du parser d'expression du framework Angular 2, mais en Scala, à une version développée avec la bibliothèque \emph{scala-parser-combinators} \cite{scala-parser-combinators}, plus propre et idiomatique. La grammaire du langage n'a cependant pas été significativement modifiée. L'optimisateur d'expressions est réutilisé pratiquement tel quel.
 
 \subsection{Processus de compilation du template}
 
@@ -39,93 +39,32 @@ Pour chaque nœud DOM devant être associé à un comportement dynamique, un \te
 
 Si l'élément ne peut pas posséder d'attribut, c'est à dire lorsqu'il s'agit d'un nœud \texttt{Text} ou \texttt{Comment}, un élément \emph{placeholder} \texttt{<xuen:placeholder>} est inséré à sa place dans l'arbre DOM du template et l'attribut est placé sur cet élément. Dans ce cas, lors de la construction du comportement au moment de l'instanciation du template, l'élément \emph{placeholder} sera en premier lieu remplacé par un nœud correspondant à l'original puis le comportement spécifique de ce nœud sera implémenté.
 
-Un \texttt{Behavior} peut en réalité implémenter plus d'un comportement pour un même élément. Si deux annotations sont présente sur un même élément, le \texttt{Behavior} construit à l'occasion du traitement de la première annotation est réutilisé pour la deuxième annotation. L'objet \texttt{Behavior} sera donc en charge de construire deux comportements dynamiques différents sur le même élément.
+Un \texttt{Behavior} peut en réalité implémenter plus d'un comportement pour un même élément. Si deux annotations sont présentes sur un même élément, le \texttt{Behavior} construit à l'occasion du traitement de la première annotation est réutilisé pour la deuxième annotation. L'objet \texttt{Behavior} sera donc en charge de construire deux comportements dynamiques différents sur le même élément.
 
-À l'inverse de la compilation, le processus d'instanciation est relativement simple. Le template est à présent sous forme normalisée, tous les comportements sont attachés à des éléments annoté par l'attribut \texttt{xuen:behavior}. Juste avant d'implémenter les comportement dynamiques, l'objet template est cloné pour construire une nouvelle structure indépendante de l'original qui est conservée en tant que modèle. La bibliothèque utilise alors la \texttt{Map} associant les identifiants des différents comportements enregistrés pour le template avec les objets \texttt{Behavior} encapsulant la logique de construction instancier à proprement parler ces comportements.
+À l'inverse de la compilation, le processus d'instanciation est relativement simple. Le template est à présent sous forme normalisée, tous les comportements sont attachés à des éléments annotés par l'attribut \texttt{xuen:behavior}. Juste avant d'implémenter les comportements dynamiques, l'objet template est cloné pour construire une nouvelle structure indépendante de l'originale qui est conservée en tant que modèle. La bibliothèque utilise alors la \texttt{Map} associant les identifiants des différents comportements enregistrés avec les objets \texttt{Behavior} encapsulant la logique de construction pour instancier à proprement parler ces comportements.
 
-Le sélecteur css \texttt{[xuen:behavior="..."]} est utilisé pour récupérer l'élément sur lequel le comportement doit être appliqué puis la méthode \texttt{build} de l'objet \texttt{Behavior} est invoquée avec la référence vers l'élément courant. Cette méthode va alors instancier à proprement l'ensemble des comportements liés à cet élément.
+Le sélecteur CSS \texttt{[xuen:behavior="..."]} est utilisé pour récupérer l'élément sur lequel le comportement doit être appliqué puis la méthode \texttt{build} de l'objet \texttt{Behavior} est invoquée avec la référence vers l'élément courant. Cette méthode va alors instancier à proprement l'ensemble des comportements liés à cet élément.
 
-De façon générale \emph{instancier un comportement} implique construire une paire signal + observateur qui implémentera le comportement désiré. Cette paire est initialement construite déconnectée. Une fois l'élément hôte connecté, son template est \emph{activé} ce qui entraine la liaison  des observateurs avec le signal associé et donc la mise en place du comportement dynamique.
+De façon générale \emph{instancier un comportement} implique construire une paire (signal, observateur) qui implémentera le comportement désiré. Cette paire est initialement construite déconnectée. Une fois l'élément hôte connecté, son template est \emph{activé} ce qui entraine la liaison  des observateurs avec le signal associé et donc la mise en place du comportement dynamique.
 
 Lorsqu'un élément est déconnecté, son template est \emph{désactivé}. Cette opération déconnecte l'ensemble des signaux et observateurs utilisé dans l'implémentation de ce template, assurant ainsi qu'il n'existe plus de lien entre le reste du système et l'élément déconnecté. Sans cette étape, il existe un risque que les éléments ne puissent pas être désalloués par le \emph{garbage collector} puisqu'une référence subsiste entre le reste du graphe de signaux et eux.
 
-\subsection{Compilation des expressions}
-\subsubsection{Optimisateur}
-\subsection{Interprétation des expressions}
+\subsection{Ordre de construction des \emph{Custom Elements}}
 
-\newpage
-\section{Difficultés rencontrées}
-\subsection{Ordre de construction des \emph{custom elements}}
+La spécifique \emph{Custom Elements} \cite{w3c-custom-elements} défini très précisément la façon dont un élément personnalisé est initialisé par le navigateur. Cette procédure, appelée \emph{upgrade} \cite[\small 2.5 Upgrades]{w3c-custom-elements}, implique une combinaison de piles et de queues pour enregistrer les actions à effectuer par le navigateur au fil de l'analyse du document HTML.
 
-\textit{Cette section nécessite rédaction}
+De plus la notion de \emph{connexion} au document est introduite: un élément est \emph{connecté} si il fait partie de la hiérarchie du document, \emph{déconnecté} s'il s'agit d'un élément flottant hors de l'arbre DOM principal.
 
-Pour résumer le problème: les éléments customs ne sont "upgradé" (le browser invoque le constructeur de la classe associée) que lorsqu'ils sont "connectés" (leur parent de niveau racine est un Document) SAUF s'il s'agit de l'élément parent étant instancié.
+L'\emph{upgrade} d'un élément ne s'effectue en principe que si cet élément est \emph{connecté} au document. Sauf s'il s'agit d'un élément étant explicitement créé par l'utilisateur. Ainsi l'utilisation de la méthode \texttt{createElement} avec un élément personnalisé provoque l'\emph{upgrade} instantané de l'élément créé, mais laisse les éléments de son template dans l'état non-\emph{upgradé}, car ceux-ci n'ont pas été instancié explicitement et que leur parent, en l'occurrence l'élément créé par \texttt{createElement}, n'est pas encore inséré dans le document; ils ne sont donc pas considérés \emph{connectés}.
 
-Le problème est que le callback \emph{connectedCallback} est invoqué sur l'élément parent avant que les éléments enfants ne soit considérés comme connectés et upgradés. Ainsi, lorsque le template de l'élément parent est activé avec la connexion au document, les éléments enfants n'ont même pas eu l'occasion de s'initialiser et les mécanismes de data-binding explosent.
+Le constructeur de l'élément racine est donc invoqué alors que le constructeur de ses enfants n'a pas encore été invoqué. Hors, il est déjà possible d'utiliser \texttt{querySelector} pour accéder à ces éléments non-initialisés.
 
-La solution adoptée est de "monter" le template de l'élément premièrement dans un sous-enfant bidon du <body>, avant de le remonter correctement dans le sous-arbre DOM de l'élément. Ce passage rapide dans le body du document déclanche l'upgrade immédiat des éléments enfants, mais ajoute son lot de nouvelle complexités. L'élément enfant est en effet considéré comme "connecté" puis "déconnecté" au cours de l'initialisation de son parent, ce qui active le template de l'élément enfant avant que l'élément parent ait eu l'occasion de s'initialiser entièrement!! Afin de prévenir ce comportement, une variable globale \texttt{forcedUpgrade} est maintenue pour déterminer si la connexion d'un élément est lié à l'upgrade forcé ou non. Dans le cas où l'élément est connecté dans le but de l'upgrader, ses callbacks \texttt{connected} et \texttt{disconnected} sont ignorés.
+Le problème s'amplifie lorsque l'élément parent devient \emph{connecté}. Le mécanisme de queues décrit dans le standard implique que l'appel du \emph{callback} de l'élément parent est planifié avant la considération des éléments enfants. Par conséquent, la méthode \texttt{connecteCallback} est invoquée sur l'élément parent, une fois encore, avant que ses enfants n'aient eu l'occasion de s'initialiser.
 
-Jusqu'à présent, cette solution semble fonctionner dans tous les cas. Ci-dessous l'ordre des opérations observées, avec le code de construction correspondant.
+Dans Xuen, le \emph{callback} de connexion est utilisé pour activer le template de l'élément parent, construisant alors l'ensemble des liens de \emph{data-binding} entre parent et enfants. Si un élément enfant n'est pas encore instancié à ce moment là, les points de connexion sous forme de signaux permettant le \emph{data-binding} ne sont pas encore disponibles et le système est alors laissé dans un état totalement inutilisable.
 
-\begin{lstlisting}
-class Foo extends Element(Foo)
-object Foo extends Component[Foo](
-	"x-foo", template = html"<x-bar><x-baz></x-baz></x-bar>",
-	dependencies = List(Bar, Baz))
+Afin de contourner ce problème, l'initialisation d'un élément personnalisé place temporairement les éléments de son template dans l'élément \texttt{<body>} du document, forçant ainsi l'\emph{upgrade} de ses éléments enfants. Ces éléments sont par la suite déplacés dans le \emph{Shadow DOM} de l'élément, cette fois-ci dans l'état initialisé. Cette opération s'effectue dans le constructeur de la classe \texttt{Element} du framework, avant le constructeur de la sous-classe implémentée par le développeur. Celui-ci est donc libre d'accéder aux éléments du template du composant avec la garantie que ceux-ci seront initialisés.
 
-class Bar extends Element(Bar)
-object Bar extends Component[Bar](
-	"x-bar", template = html"<slot></slot>")
+Cette sémantique imposée par le standard est déroutante. Le fait de retarder l'\emph{upgrade} d'un élément à sa connexion est déjà étonnant, mais appeler le \emph{callback} de connexion de son parent avant de considérer l'\emph{upgrade} des enfants est réellement problématique.
 
-class Baz extends Element(Baz)
-object Baz extends Component[Baz]("x-baz", template = html"Baz")
-\end{lstlisting}
-
-\subsubsection{Constructeur}
-\begin{lstlisting}
-val foo = new Foo
-println("--")
-dom.document.body.appendChild(foo)
-\end{lstlisting}
-
-\begin{lstlisting}
-[x-foo] Upgrade start
-[x-foo] Upgrade end
---
-[x-foo] Connected
-[x-bar] Upgrade start
-[x-bar] Upgrade end
-[x-bar] Connected
-[x-baz] Upgrade start
-[x-baz] Upgrade end
-[x-baz] Connected
-\end{lstlisting}
-
-\subsubsection{Parser HTML (connecté)}
-\begin{lstlisting}
-dom.document.body.innerHTML = "<x-foo></x-foo>"
-\end{lstlisting}
-
-\begin{lstlisting}
-[x-foo] Upgrade start
-[x-bar] Upgrade start
-[x-bar] Upgrade end
-[x-bar] Connected
-[x-baz] Upgrade start
-[x-baz] Upgrade end
-[x-baz] Connected
-[x-foo] Upgrade end
-[x-foo] Connected
-\end{lstlisting}
-
-
-\subsubsection{Parser HTML (déconnecté)}
-\begin{lstlisting}
-val div = dom.document.createElement("div")
-div.innerHTML = "<x-foo></x-foo>"
-\end{lstlisting}
-
-\begin{lstlisting}
-[x-foo] Upgrade start
-[x-foo] Upgrade end
-\end{lstlisting}
+Le standard conseille de retarder les opérations d'initialisation à la première invocation du \emph{callback} de connexion. Par conséquent, accéder aux éléments enfants lors de l'invocation du constructeur peut sembler être une mauvaise pratique. En revanche, il n'est pas cohérent que ces éléments ne soient toujours pas initialisés au moment où l'élément parent devient connecté. Comment le développeur est-il sensé configurer les composants de son template si ceux-ci ne sont pas encore entièrement construits ?

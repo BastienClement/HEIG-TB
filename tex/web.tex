@@ -2,13 +2,13 @@
 
 \section{Motivations}
 
-La construction de l'interface utilisateur d'un logiciel est une tâche essentielle mais néanmoins fastidieuse. Les technologies classiques telles que \emph{Swing} sur la plateforme Java construisent ces interfaces de façon impérative, en utilisant le même langage que celui utilisé pour le développement de la partie métier de l'application. Cependant, un langage adapté à la définitions d'algorithmes traitant des données ne l'est pas forcément à la définition d'interfaces graphiques pour l'utilisateur. Le code résultant est alors excessivement long, verbeux et répétitif.
+La construction de l'interface utilisateur d'un logiciel est une tâche essentielle mais néanmoins fastidieuse. Les technologies classiques telles que \emph{Swing} sur la plateforme Java construisent ces interfaces de façon impérative, en utilisant le même langage que celui utilisé pour le développement de la partie métier de l'application. Cependant, un langage adapté à la définition d'algorithmes traitant des données ne l'est pas forcément à la définition d'interfaces graphiques pour l'utilisateur. Le code résultant est alors excessivement long, verbeux et répétitif.
 
 La tendance actuelle tend à dissocier logique métier et interface en offrant au développeur un langage alternatif, adapté à la construction d'interface de façon déclarative, de façon similaire à la construction d'une page web en HTML. C'est par exemple le cas de \emph{JavaFX} utilisant un document XML pour décrire la structure de l'interface et le langage CSS pour définir son apparence.
 
-Des mécanismes de \emph{data-binding} sont ensuite fournis pour injecter les données produites par l'application à des emplacements spécifiques de l'interface. le framework s'occupant ensuite de la mise à jour automatique de l'interface lorsque les données source changent \footnote{En \emph{JavaFX}, l'interface \texttt{Observable} est à la base de ce mécanisme.}.
+Des mécanismes de \emph{data-binding} sont ensuite fournis pour injecter les données produites par l'application à des emplacements spécifiques de l'interface. Le framework s'occupant ensuite de la mise à jour automatique de l'interface lorsque les données source changent \footnote{En \emph{JavaFX}, l'interface \texttt{Observable} est à la base de ce mécanisme.}.
 
-Dans le monde du web, malgré l'usage universel des langages HTML et CSS, aucun mécanisme officiel de \emph{data-binding} n'est disponible. Il en est donc de la responsabilité du développeur de manipuler explicitement la structure du document avec l'interface du DOM pour le maintenir à jour avec ses données métier, ou de réutiliser une bibliothèque existante.
+Dans le monde du web, malgré l'usage universel des langages HTML et CSS, aucun mécanisme officiel de \emph{data-binding} n'est disponible. Il est donc de la responsabilité du développeur de manipuler explicitement la structure du document avec l'interface du DOM pour le maintenir à jour avec ses données métier, ou de réutiliser une bibliothèque existante.
 
 L'introduction des technologies \emph{Web Components} étend les possibilités de la plateforme et rend le développement de composants réutilisables considérablement plus aisé, mais n'adresse pas la question du \emph{data-binding}. Le développeur est toujours responsable de cet aspect pourtant complexe de son application.
 
@@ -18,7 +18,7 @@ La syntaxe HTML utilisée dans la définition des templates est étendue pour y 
 
 Finalement, l'implémentation des signaux développées précédemment est réutilisée comme mécanisme de propagation des changements entre le code métier et l'interface. La bibliothèque se charge se configurer les observateurs nécessaires en fonction des données injectées dans l'interface et s'occupe des mises à jour nécessaires lorsque ces données changent.
 
-\section{À propos des standards Web Components}
+\section{À propos des standards Web Components} \label{sec:web-about-webcomponents}
 
 L'implémentation de la partie web de Xuen dépend extensivement des mécanismes introduits par les spécifications \emph{Shadow DOM} \cite{w3c-shadowdom}, \emph{Custom Elements} \cite{w3c-custom-elements} et les spécifications annexes telles que \emph{CSS Scoping} \cite{w3c-css-scopings}.
 

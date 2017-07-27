@@ -12,13 +12,54 @@
 %\includeonly{tex/art}
 
 \begin{document}
-
 \frontmatter
-\maketitle
+
+\makeatletter
+\begin{titlepage}
+	\includegraphics[width=6cm]{img/heigvd.png}\\[25ex]
+	\begin{center}
+		{\normalsize \bfseries Travail de Bachelor}\\[2ex]
+		{\LARGE \@title }\\[20ex]
+		{\normalsize \bfseries Étudiant}\\[1ex]
+		{\large \@author}\\[3ex]
+		{\normalsize \bfseries Professeur}\\[1ex]
+		{\large Marcel Graf}\\[3ex] 
+		{\normalsize \bfseries Expert}\\[1ex]
+		{\large Julien Richard-Foy}\\[25ex]
+		{\normalsize \@date}
+	\end{center}
+\end{titlepage}
+\makeatother
+\thispagestyle{empty}
+\setcounter{page}{0}
 
 \chapter*{Résumé}
 
-\textit{Bla bla bla}
+Les pages web modernes ne sont plus de simples documents statiques que l'utilisateur se contente de consulter. Ce sont à présent de véritables applications et des plates-formes de collaboration n'ayant plus rien à envier à l'environnement \emph{desktop} classique. La mise à jour en temps-réel du contenu présenté par l'interface de l'application n'est plus un luxe, mais la norme. Ceci est indispensable pour permettre une collaboration efficace entre ses utilisateurs.
+
+Cette tendance se retrouve dans le développement continuel des standards web et des navigateurs. \emph{WebSocket}, \emph{ECMAScript 2015}, \emph{Web Components} sont des exemples des nombreux outils à la disposition du développeur pour bâtir des applications plus dynamiques et modulaires que jamais.
+
+Ce travail explore l'utilisation combinée de ces technologies avec le paradigme de programmation réactive-fonctionnelle. Le concept de \emph{signal}, une valeur pouvant varier avec le temps et offrant un mécanisme de propagation des mises à jour, est introduit puis implémenté sous la forme d'une bibliothèque réutilisable en langage \emph{Scala}. 
+
+Cette bibliothèque propose également un ensemble d'outils permettant la définition, en \emph{Scala}, de nouveaux éléments HTML indépendants, composables et conformes aux standards les plus récents. Un système de \emph{data-binding} permet d'injecter la valeur d'un signal directement dans un \emph{template} prédéfini par l'élément. La mise à jour de l'interface est alors gérée de façon automatique par le framework.
+
+Finalement, une application de démonstration est développée et permet d'illustrer l'utilisation conjointe de ces différents concepts. Le compilateur \emph{Scala.js} est utilisé pour permettre l'exécution du code \emph{Scala} directement dans le navigateur.
+
+\chapter*{Cahier des charges}
+
+Ce travail de Bachelor a pour objectif de concevoir une application de gestion collaborative qui permet à ses utilisateurs d'interagir en temps réel pour accomplir certaines tâches (organisation du groupe, gestion des membres, gestion des scores, etc.)
+
+\begin{enumerate}
+	\item Conception d'un modèle de données
+	
+	\item  Conception d'une architecture et d'un protocole pour la propagation des données en temps réel entre serveur et clients
+	
+	\item  Conception d'une couche de présentation qui reflète en temps réel le modèle de données dans un document HTML
+	
+	\item  Développement d'une application web (client et serveur) avec programmation en paradigme réactif et fonctionnel (Scala, Scala.js)
+\end{enumerate}
+
+Dans la conception l'accent sera mis sur le développement de structures réutilisables dans d'autres applications collaboratives.
 
 \tableofcontents
 
@@ -33,8 +74,30 @@
 %\include{tex/priorart}
 %\include{tex/implementation}
 
-\part{Application Guild-Tools}
+\part{Application de démonstration}
 \include{tex/guildtools}
+
+\chapter{Conclusion}
+
+Ce travail a été l'occasion d'explorer le paradigme de programmation réactif-fonctionnel, spécifiquement dans le cadre d'une utilisation combinée avec les technologies les plus récentes de la plate-forme web. La notion de signal est néanmoins un concept très général, pouvant s'appliquer dans une multitude de situations impliquant la manipulation d'un ensemble de données interdépendantes.
+
+Le projet, initialement orienté sur le développement d'une application complète, a dérivé sur le développement d'une bibliothèque générique et réutilisable. Les fonctionnalités de l'application ont donc été réévaluées à la baisse, occupant plus le rôle de projet de démonstration que celui de produit final du travail.
+
+Les résultats sont dans l'ensemble satisfaisants, la complexité et le volume du code produit ne sont pas excessifs par rapport aux fonctionnalités disponibles. L'implémentation est structurée en couches successives construisant sur le concept relativement simple que sont les signaux. La réutilisation des technologies web existantes permet de déléguer une part importante du travail au navigateur.
+
+Le support des technologies liées aux \emph{Web Components} laisse encore beaucoup à désirer au niveau des navigateurs. De même, des constructions introduites par le langage \emph{ES6} depuis plus de deux ans ne sont toujours pas universellement supportées.
+
+Les tendances récentes dans le développement des frameworks web tels qu'\emph{Angular}, \emph{Polymer} ou \emph{React} sont une preuve de l'intérêt des développeurs pour des outils permettant la construction de composants isolés, réutilisables et dynamiques. Le support natif des \emph{Custom Elements} et de \emph{Shadow DOM}, sur l'ensemble des navigateurs, serait une étape importante dans l'évolution du développement pour le web.
+
+Concernant plus spécifiquement ce projet, l'exécution de la compilation des templates et des expression au \emph{runtime} laisse beaucoup à désirer. L'utilisation de Scala.js impose, de fait, l'utilisation d'un compilateur pour transformer le code Scala en code JavaScript interprétable par le navigateur. Autant en profiter pour effectuer un maximum de pré-traitements avant de transmettre l'application au navigateur sous forme compilée.
+
+Le système de macros du compilateur Scala est toujours considérée expérimentale depuis son introduction il y a plus de 5 ans avec la version 2.10 du langage. Le développement récent de projets tels que \emph{Scala Meta} \cite{scalameta} et des \emph{new-style macros} proposent des approches plus simples pour le développement de macros et peuvent offrir une piste intéressante à explorer pour le développement d'un compilateur de template sous forme de macros dans le compilateur Scala.
+
+Il est également dommage de disposer d'un langage d'expressions non-typé, dans un framework destiné au langage Scala. L'introduction de l'usage des macros serait également l'occasion de vérifier, lors de la compilation, que le code des expressions soit cohérent avec l'interface déclarée des éléments personnalisés.
+
+Le développement du support du parallélisme dans les graphes de signaux est un autre domaine de développement pouvant étendre l'application du concept de signaux dans d'autres types d'applications, notamment côté serveur et dans le contexte de l'Internet des Objets (\emph{IoT}).
+
+Finalement, l'écosystème Scala.js est en pleine expansion. Il est important de rester attentif à l'état de l'art en ce qui concerne les frameworks web. L'arrivée prochaine des \emph{Web Component} sera certainement l'occasion de voir se développer d'avantages de bibliothèques exploitant ces outils standards dans leur implémentation.
 
 \backmatter
 \part{Annexes}

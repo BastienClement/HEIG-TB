@@ -15,7 +15,7 @@ Bien que tous deux soient une abstraction du temps, les \texttt{Rx} représenten
 	\end{tabular}
 \end{table}
 
-Ainsi, certaines opérations monadique dont la sémantique peut être ambiguë dans le cas des valeurs réactives peuvent avoir des comportements considérablement différents entre ces deux concepts. C'est le cas notamment de la fonction \texttt{flatMap}
+Ainsi, certaines opérations monadiques, dont la sémantique peut être ambiguë dans le cas des valeurs réactives, peuvent présenter des comportements considérablement différents entre leur implémentation par les signaux et les \texttt{Rx}s. C'est le cas notamment de la fonction \texttt{flatMap}
 \footnote{\texttt{Signal[T].flatMap[U](fn: T => U): Signal[U]}, de façon similaire pour \texttt{Rx[T]}}:
 
 \begin{itemize}
@@ -42,10 +42,10 @@ et produira des résultats radicalement différents selon l'abstraction utilisé
 \begin{itemize}
 	\item Dans le cas des \texttt{Rx}, le résultat est l'agglomération des tous les flux de valeurs de \texttt{b} sélectionnés au fil du temps, potentiellement de multiples fois. Le résultat n'est très probablement pas celui escompté.
 	
-	\item Dans le cas de \texttt{Signal}, le résultat est un signal \texttt{c} dont la valeur est le double de celle d'un signal contenu dans le tableau \texttt{b} et désigné par la valeur du signal \texttt{a}, le tout sur la base des valeurs de ces signaux au moment présent. Dans le future, lorsque la valeur de \texttt{a} ou de \texttt{b(x)} changera, la valeur de \texttt{c} sera également mise à jour.
+	\item Dans le cas de \texttt{Signal}, le résultat est un signal \texttt{c} dont la valeur est le double de celle d'un signal contenu dans le tableau \texttt{b} et désigné par la valeur du signal \texttt{a}, le tout sur la base des valeurs de ces signaux au moment présent. Dans le futur, lorsque la valeur de \texttt{a} ou de \texttt{b(x)} changera, la valeur de \texttt{c} sera également mise à jour.
 \end{itemize}
 
-La sémantique des signaux, basée sur les valeurs plutôt que la séquences de ces valeurs, a pour but d'être la plus adaptée possible à l'usage qui en est fait dans ce travail, c'est à dire la conception d'interfaces graphique.
+La sémantique des signaux, basée sur les valeurs plutôt que la séquence de ces valeurs, a pour but d'être la plus adaptée possible à l'usage qui en est fait dans ce travail, c'est à dire la conception d'interfaces graphique.
 
 Une conséquence supplémentaire de cette différence entre signaux et \texttt{Rx} est la possibilité de définir aisément le concept de \emph{signal expression} dans le cas des signaux. Dans le cas des \texttt{Rx}, le comportement attendu d'une telle construction n'est pas évident dans une situation où les flux sont potentiellement finis.
 
@@ -55,7 +55,7 @@ Scala.rx est l'implémentation la plus proche des signaux utilisés dans ce proj
 Les différences sont principalement liées aux limitations volontairement imposées dans Scala.rx.
 
 \subsubsection{Pas de variable réactive non-définie / vide}
-La raison invoquée est la difficulté d'intégrer l'absence de valeur de façon intuitive dans la syntaxe déclarative. Plus spécifiquement, l'auteur mentionne plusieurs solutions potentiels:
+La raison invoquée est la difficulté d'intégrer l'absence de valeur de façon intuitive dans la syntaxe déclarative. Plus spécifiquement, l'auteur mentionne plusieurs solutions potentielles:
 \begin{enumerate}
 	\item Bloquer le thread courant jusqu'à ce qu'une valeur soit disponible. Cette solution n'est cependant pas envisageable pour une implémentation visant l'environnement Javascript.
 	\item Lancer une exception lors de l'accès à une variable vide, mais recommencer l'opération une fois que sa valeur sera définie. Cette option présente le désavantage que le calcul d'une variable réactive puisse potentiellement être démarré puis interrompu de multiples fois si de nombreuses dépendances sont indéfinies.
@@ -76,8 +76,8 @@ Dans Scala.rx, les expressions qui définissent des variables réactives sont r�
 
 De plus, l'approche n'est pas portable entre les versions de Scala puisqu'elle dépend de l'implémentation interne du compilateur. Dans le cas de Scala.rx, l'implémentation est compilée simultanément pour les version 2.10, 2.11 et 2.12 de Scala et requiert pour chaque version une implémentation différente des macros pour s'aligner avec les changements apportés au compilateur et à la syntaxe du langage.
 
-Une approche alternative est possible: \texttt{DynamicVariable}. Cette classe de la bibliothèque standard de Scala est rarement utilisée puisque très spécifique et généralement moins explicite que l'usage de paramètres implicites qui sont plus en accord avec les principes de la programmation fonctionnelle. Elle rempli cependant un rôle semblable en offrant une sémantique de variable à portée dynamique plutôt que lexicale. Ce mécanisme permet de déplacer la transmission du contexte d'évaluation des paramètres implicites à un canal annexe dédié.
+Une approche alternative est possible: \texttt{DynamicVariable}. Cette classe de la bibliothèque standard de Scala est rarement utilisée puisque très spécifique et généralement moins explicite que l'usage de paramètres implicites qui sont plus en accord avec les principes de la programmation fonctionnelle. Elle remplit cependant un rôle semblable en offrant une sémantique de variable à portée dynamique plutôt que lexicale. Ce mécanisme permet de déplacer la transmission du contexte d'évaluation des paramètres implicites à un canal annexe dédié.
 
 Le code est ainsi fortement simplifié puisque la transmission du contexte est clairement dissociée, évitant la nécessité de modifier le code utilisateur et donc l'usage de macros au prix d'une architecture pouvant être considérée moins pure d'un point de vue fonctionnel. L'absence de macros permet également une compatibilité plus aisée avec les futures versions du langage.
 
-En contre partie, la détection automatique des dépendances dépend de l'exécution synchrone de l'expression de définition (§~\ref{sec:sig-pureness}). De façon générale, effectuer le calcul de la valeur d'un signal de façon différé par rapport à l'instant d'évaluation choisi par la bibliothèque ne semble pas compatible avec les objectifs de fournir un modèle d'évaluation strict et prévisible.
+En contrepartie, la détection automatique des dépendances dépend de l'exécution synchrone de l'expression de définition (§~\ref{sec:sig-pureness}). De façon générale, effectuer le calcul de la valeur d'un signal de façon différée par rapport à l'instant d'évaluation choisi par la bibliothèque ne semble pas compatible avec les objectifs de fournir un modèle d'évaluation strict et prévisible.

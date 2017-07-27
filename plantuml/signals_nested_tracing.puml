@@ -1,0 +1,20 @@
+@startuml
+!include prelude.iuml
+
+rectangle "Contexte 1" {
+rectangle "Contexte 2" {
+	(A)
+	(B)
+	(C)
+}
+	(E)
+	(D)
+}
+
+A <.. C
+B <.. C
+
+C <-- E
+D <-- E
+
+@enduml

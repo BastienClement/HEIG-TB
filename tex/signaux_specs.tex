@@ -25,19 +25,19 @@ a \text{ flatMap } (x \mapsto f(x)  \text{ flatMap } g)
 Ici, l'opérateur $\equiv$ désigne une équivalence structurelle: les deux expressions sont substituables sans affecter le comportement du programme.
 
 \subsection{Accès à l'état courant}
-L'interface d'un signal \texttt{Signal[T]} défini deux méthodes pour accéder à sa valeur courante:
+L'interface d'un signal \texttt{Signal[T]} définit deux méthodes pour accéder à sa valeur courante:
 \begin{enumerate}
 	\item \textbf{\texttt{Signal.option}}: retourne la valeur courante d'un signal sous la forme d'une \texttt{Option[T]}. C'est une façon sûre d'accéder à l'état du signal quel qu'il soit.
 	
-	\item \textbf{\texttt{Signal.value}}: retourne la valeur courante du signal (donc une valeur de type \texttt{T}) s'il est défini ou lance une exception\footnote{De type \texttt{UndefinedSignalException}} s'il ne l'est pas. De façon générale, cette méthode est plutôt destinée à être utilisée dans le cadre de la définition de signaux expression (section \ref{sec:sig-expr}) puisque dans ce cas, l'exception est traitée par le constructeur et entraîne la construction d'un signal vide.
+	\item \textbf{\texttt{Signal.value}}: retourne la valeur courante du signal (donc une valeur de type \texttt{T}) s'il est défini ou lance une exception\footnote{De type \texttt{UndefinedSignalException}} s'il ne l'est pas. De façon générale, cette méthode est plutôt destinée à être utilisée dans le cadre de la définition de signaux expression (section \ref{sec:sig-expr}) puisque, dans ce cas, l'exception est traitée par le constructeur et entraîne la construction d'un signal vide.
 \end{enumerate}
 
 Dans le cas où il est nécessaire d'être informé des futurs changements d'états du signal, le mécanisme d'observateur (§~\ref{sec:sig-obs}) peut être utilisé.
 
 \subsection{Pureté et modes d'évaluation} \label{sec:sig-pureness}
-Un signal est considéré comme une construction fonctionnelle semi-pure: il n'est dépendant d'aucun état global à l'exception d'autres signaux et ne présente pas d'effets de bords. Ces contraintes s'étendent également aux fonctions utilisées dans leur définition ou transformation par le biais de méthodes telles que \texttt{map} ou \texttt{filter}. Le langage Scala ne permettant pas d'imposer la notion de pureté aux fonction, il est de la responsabilité du développeur de s'assurer que cette contrainte soit respectée.
+Un signal est considéré comme une construction fonctionnelle semi-pure: il n'est dépendant d'aucun état global à l'exception d'autres signaux et ne présente pas d'effets de bords. Ces contraintes s'étendent également aux fonctions utilisées dans leur définition ou transformation par le biais de méthodes telles que \texttt{map} ou \texttt{filter}. Le langage Scala ne permettant pas d'imposer la notion de pureté aux fonctions, il est de la responsabilité du développeur de s'assurer que cette contrainte soit respectée.
 
-Cette contrainte découle principalement de l'existence de deux modes d'évaluations pour les signaux qui définissent à quel moment l'état d'un signal enfant doit être calculé après le changement d'état d'un de ses signaux parent:
+Cette contrainte découle principalement de l'existence de deux modes d'évaluation pour les signaux qui définissent à quel moment l'état d'un signal enfant doit être calculé après le changement d'état d'un de ses signaux parent:
 
 \begin{enumerate}
 	\item \emph{Paresseux}: l'état du signal enfant est réévalué à la demande, lorsque son état courant est accédé et après un changement d'état d'au moins un des ses signaux parents,
@@ -50,7 +50,7 @@ Le mode différé n'est utilisé que dans les situations où l'événement de ch
 
 Par ailleurs, entre les changements d'états d'un signal parent, l'état d'un signal enfant est gardé en mémoire. L'objectif est d'éviter de devoir recalculer l'ensemble d'une hiérarchie de signaux à chaque accès d'un signal enfant. La valeur d'un signal enfant n'étant pas sensé changer sans un changement d'état d'un parent.
 
-En résumé, l'usage combiné de la \emph{memoization} et de l'évaluation paresseuse rend le timing d'évaluation des fonctions utilisées pour la définition et la transformation de signaux imprévisible, d'autant plus lorsque l'application et la structure de graphe de signaux se complexifie. Respecter la contrainte de pureté lors de l'utilisation des signaux permet de s'affranchir de cette complexité et de se concentrer sur la logique métier de l'application développée.
+En résumé, l'usage combiné de la \emph{memoization} et de l'évaluation paresseuse rend le timing d'évaluation des fonctions utilisées pour la définition et la transformation de signaux imprévisible, d'autant plus lorsque l'application et la structure de graphe de signaux se complexifient. Respecter la contrainte de pureté lors de l'utilisation des signaux permet de s'affranchir de cette complexité et de se concentrer sur la logique métier de l'application développée.
 
 \subsection{Hiérarchie simplifiée}
 La figure \ref{fig:sig-simple-hierarchy} présente une version simplifiée de la hiérarchie des signaux. Seules les informations pertinentes à l'utilisation des signaux ont été conservée: les méthodes, interfaces, classes intermédiaires relevant des détails d'implémentation ne sont pas incluses. La hiérarchie complète formée par les signaux est présentée en section \ref{sec:sig-hierarchy}.
@@ -66,13 +66,13 @@ Le trait racine \texttt{Signal} est l'interface générique destinée à être m
 
 La séparation des signaux en deux sous-arbres, \texttt{Mutable} et \texttt{Immutable}, capture les différences sémantiques liées à la présence ou l'absence d'une garantie d'immutabilité de l'état d'un signal.
 
-L'intérêt d'un signal dont la valeur ne varie pas peut sembler limité à priori mais se révèle lorsqu'une valeur non-signal doit être encapsulée dans un signal afin de satisfaire le système de types. Un tel signal n'a pas de raison de changer d'état au fil du temps, il est alors effectivement immutable. La présence de cette contrainte de façon explicite au niveau de la hiérarchie permet la mise en place d'un certain nombre d'optimisations.
+L'intérêt d'un signal dont la valeur ne varie pas peut sembler limité a priori mais se révèle lorsqu'une valeur non-signal doit être encapsulée dans un signal afin de satisfaire le système de types. Un tel signal n'a pas de raison de changer d'état au fil du temps, il est alors effectivement immutable. La présence de cette contrainte de façon explicite au niveau de la hiérarchie permet la mise en place d'un certain nombre d'optimisations.
 
 Une instance de la classe \texttt{Constant[T]} est simplement une valeur de type \texttt{T} avec une interface de signal. Un tel signal est toujours dans l'état \emph{défini}.
 
 L'objet singleton \texttt{Undefined} représente quant à lui le signal dont l'état est toujours \emph{indéfini}. Il est généralement référencé à partir de l'objet compagnon du trait \texttt{Signal}: sous la forme \texttt{Signal.undefined}. Puisqu'il n'est jamais défini, il est déclaré comme une instance de \texttt{Signal[Nothing]}. Il est ainsi, par covariance, substituable à n'importe quel type de signal \texttt{Signal[T]} \footnote{\texttt{Nothing} est le \emph{bottom type} du système de types en Scala, il est sous-type de tous les types ($\forall \texttt{T}, \texttt{Nothing <: T}$) mais il n'en existe aucune instance.}.
 
-Un signal immutable ne peut être ni \emph{enfant} ni \emph{parent} d'autres signaux. Comme ils ne changent jamais, il n'y a pas de sens de maintenir de graphe de dépendances entre eux. Il n'y aura en effet jamais de propagation de changement d'état à effectuer.
+Un signal immutable ne peut être ni \emph{enfant} ni \emph{parent} d'autres signaux. Comme ils ne changent jamais, il est inutile de maintenir de graphe de dépendances entre eux. Il n'y aura en effet jamais de propagation de changement d'état à effectuer.
 
 Les deux types de signaux mutables, sources (§ \ref{sec:sig-source}) et expressions (§ \ref{sec:sig-expr}), sont décrits plus en détails dans les sections les concernant.
 
@@ -90,7 +90,7 @@ L'expression fournie à \texttt{apply} sera évaluée pour déterminer la valeur
 
 La variante \texttt{define} est similaire mais considère une valeur \texttt{None} comme un signal indéfini tandis qu'une valeur \texttt{Some(v)} est considérée comme un signal défini et de valeur \texttt{v}. 
 
-S'il n'est pas souhaitable que l'expression de définition soit évaluée immédiatement, il est possible de différé son évaluation au premier accès à l'état du signal produit en utilisant le constructeur
+S'il n'est pas souhaitable que l'expression de définition soit évaluée immédiatement, il est possible de différer son évaluation au premier accès à l'état du signal produit en utilisant le constructeur
 \begin{center}
 	\code{def Signal.defer[T](expr: => T): Signal[T]}
 \end{center}
@@ -98,7 +98,7 @@ Le signal ainsi produit sera de type \texttt{Expression[T]}, même si l'expressi
 
 Les méthodes \texttt{apply}, \texttt{define} et \texttt{defer} prennent en réalité des paramètres optionnels supplémentaires permettant de configurer la sémantique du signal défini. La signature complète de ces méthodes est disponible dans la Scaladoc du projet.
 
-La secondes approche consiste en la construction explicite d'un signal de type \texttt{Source} (§ \ref{sec:sig-source}). 
+La seconde approche consiste en la construction explicite d'un signal de type \texttt{Source} (§ \ref{sec:sig-source}). 
 
 \subsection{Signal source} \label{sec:sig-source}
 
@@ -113,7 +113,7 @@ Une instance de \texttt{Source[T]} offre une méthode de mutation explicite
 \begin{center}
 	\code{def := (value: T): Unit}
 \end{center}
-permettant de mettre à jour la valeur contenue dans la source de façon impérative. Cette opération est un changement d'état de la source et provoquera l'invalidation récursive des tous les signaux en dépendant.
+permettant de mettre à jour la valeur contenue dans la source de façon impérative. Cette opération est un changement d'état de la source et provoquera l'invalidation récursive des tous les signaux qui en dépendent.
 
 Une source est destinée à être utilisées lors de la construction de système hybrides, combinant code impératif basé sur les effets de bords et code fonctionnel. La source est alors un point d'entrée dans le graphe de dépendances des signaux pour la partie de code impérative.
 
@@ -129,7 +129,7 @@ Finalement, si la nouvelle valeur d'une source est dérivée de sa valeur actuel
 \end{center}
 permet de fournir une fonction qui sera invoquée avec la valeur courante de la source et dont la valeur de retour sera utilisée comme nouvelle valeur de la source. Si la source est actuellement indéfinie, l'opérateur n'a aucun effet et la fonction n'est pas invoquée.
 
-Cet opérateur est plus qu'un simple sucre syntaxique par rapport à l'usage explicite des méthodes \texttt{option} et \texttt{value}. Dans le contexte des observateurs (§~\ref{sec:sig-obs}), accéder à la valeur d'une source (de même que n'importe quel type de signal mutable) établi une dépendance entre le signal et l'observateur. L'observateur est donc invoqué à chaque changement de la source et son implémentation consiste à la mutation de cette même source, établissant ainsi une boucle infinie.
+Cet opérateur est plus qu'un simple sucre syntaxique par rapport à l'usage explicite des méthodes \texttt{option} et \texttt{value}. Dans le contexte des observateurs (§~\ref{sec:sig-obs}), accéder à la valeur d'une source (de même que n'importe quel type de signal mutable) établit une dépendance entre le signal et l'observateur. L'observateur est donc invoqué à chaque changement de la source et son implémentation consiste en la mutation de cette même source, établissant ainsi une boucle infinie.
 
 À l'inverse, l'opérateur \code{~=} ne construit pas de dépendance entre la source et l'observateur. Il est bien entendu de la responsabilité du développeur de s'assurer de ne pas \emph{leak} la valeur précédente ou courante de cette source hors de la fonction de mutation.
 
@@ -173,7 +173,7 @@ Dans les cas les plus complexes, principalement lors de l'utilisation de structu
 
 \subsubsection{Contraintes des expressions}
 
-Les signaux doivent être considérés comme des constructions semi-pure d'un point de vue fonctionnel (§~\ref{sec:sig-pureness}). Il est ainsi important que l'expression utilisée comme définition respecte ce principe en ne provoquant aucun effet de bord et en ne dépendant d'aucune valeur mutable qui ne serait pas un signal. En effet, si une valeur mutable non-signal est référencée par une expression, l'état résultant du signal est alors dépendant de l'instant d'évaluation pour lequel aucune garantie n'est fournie.
+Les signaux doivent être considérés comme des constructions semi-pures d'un point de vue fonctionnel (§~\ref{sec:sig-pureness}). Il est ainsi important que l'expression utilisée comme définition respecte ce principe en ne provoquant aucun effet de bord et en ne dépendant d'aucune valeur mutable qui ne serait pas un signal. En effet, si une valeur mutable non-signal est référencée par une expression, l'état résultant du signal est alors dépendant de l'instant d'évaluation pour lequel aucune garantie n'est fournie.
 
 Il est aussi important que l'évaluation d'une expression s'effectue de façon synchrone. En effet la liste de dépendances du signal est construite lors de l'évaluation de l'expression. Si un signal parent est accédé de façon asynchrone ou \emph{lazy}, la dépendance ne sera pas identifiée et le signal ne sera pas correctement invalidé en cas de changement d'état de ce signal parent.
 
@@ -184,9 +184,9 @@ Il est intéressant de noter que la seule observation du paramètre de type du s
 À l'inverse, un signal \texttt{Signal[Stream[Int]]} expose l'instance de \texttt{Stream} utilisée. Dans une telle situation, si le calcul d'un élément du flux requiert l'accès à un autre signal, aucune relation de dépendance ne sera établie. Des types de signaux tels que \texttt{Signal[Stream[A => B]]}, \texttt{Signal[Future[A]]} voir même \texttt{Signal[A => B]} indiquent un risque important ne pas respecter la contrainte de synchronisme.
 
 \subsection{Opérateurs de transformations}
-Dans les exemples ci-dessous, les opérations sont supposées appliquées à une instance de type \texttt{Signal[T]}, \texttt{T} faisant ainsi référence au type d'élément contenu dans le signal original. Seules les opérateurs les plus courants et ceux utilisées par le compilateur Scala lors de la compilation d'une compréhension \texttt{for} sont traités ici. La Scaladoc du projet contient une liste exhaustive des opérations disponibles.
+Dans les exemples ci-dessous, les opérations sont supposées être appliquées à une instance de type \texttt{Signal[T]}, \texttt{T} faisant ainsi référence au type d'élément contenu dans le signal original. Seules les opérateurs les plus courants et ceux utilisées par le compilateur Scala lors de la compilation d'une compréhension \texttt{for} sont traités ici. La Scaladoc du projet contient une liste exhaustive des opérations disponibles.
 
-Ces transformations sont pour la plupart construites autour du constructeur \texttt{Signal.define}. Leur évaluation est donc immédiate et produit un valeur de retour en fonction des dépendances du signal original et des signaux accédés par la fonction de transformation fournie. Par exemple, invoquer la méthode \texttt{map} sur un signal \texttt{Constant} retournera en principe un signal \texttt{Constant}, sauf si la fonction passée à \texttt{map} fait référence à la valeur d'autres signaux, produisant alors un signal \texttt{Expression} non-constant.
+Ces transformations sont pour la plupart construites autour du constructeur \texttt{Signal.define}. Leur évaluation est donc immédiate et produit une valeur de retour en fonction des dépendances du signal original et des signaux accédés par la fonction de transformation fournie. Par exemple, invoquer la méthode \texttt{map} sur un signal \texttt{Constant} retournera en principe un signal \texttt{Constant}, sauf si la fonction passée à \texttt{map} fait référence à la valeur d'autres signaux, produisant alors un signal \texttt{Expression} non-constant.
 
 \subsubsection{Opérateur de transformation simple (\texttt{map})}
 
@@ -259,13 +259,13 @@ La fonction \texttt{filter} effectue une opération de filtrage d'un signal en a
 
 L'opérateur \texttt{fold} permet l'introduction d'un effet de \emph{mémoire} aux signaux. Il prend en paramètre un \emph{accumulateur initial} \texttt{a} de type \texttt{U} et une fonction de combinaison \texttt{f: (U, T) => U} permettant d'associer la valeur courante du signal à cet état pour produire un \emph{accumulateur courant}, également de type \texttt{U}, qui sera alors la valeur du signal produit par l'opérateur.
 
-Lors d'un changement d'état du signal initial, l'\emph{accumulateur antérieur} est combiné à la nouvelle valeur du signal pour former le nouvel \emph{accumulateur courant}. Si le signal est indéfini la fonction \texttt{f} n'est pas évaluée et l'\emph{accumulateur antérieur} devient l'\emph{accumulateur courant} sans modification. Dans le cas où le signal est initialement indéfini, l'\emph{accumulateur initial} devient l'\emph{accumulateur courant} tel quel.
+Lors d'un changement d'état du signal initial, l'\emph{accumulateur antérieur} est combiné à la nouvelle valeur du signal pour former le nouvel \emph{accumulateur courant}. Si le signal est indéfini, la fonction \texttt{f} n'est pas évaluée et l'\emph{accumulateur antérieur} devient l'\emph{accumulateur courant} sans modification. Dans le cas où le signal est initialement indéfini, l'\emph{accumulateur initial} devient l'\emph{accumulateur courant} tel quel.
 
 Le signal retourné par \texttt{fold} est toujours défini.
 
 L'opérateur \texttt{fold} possède la particularité d'être affecté par le mode d'évaluation du signal qu'il produit. En mode paresseux, l'opérateur de combinaison ne serait appliqué que lors de l'accès au signal enfant. Il serait alors possible de manquer des changements d'état du signal parent. C'est pourquoi les signaux produits par l'opérateur \texttt{fold} ont toujours un mode d'évaluation différé afin d'obtenir un comportement déterministe et indépendant de la façon dont le signal enfant est utilisé.
 
-À l'inverse de la fonction \texttt{fold} présente sur les collections de la bibliothèque standard Scala qui retourne une unique valeur pour une collection. La fonction \texttt{fold} des signaux retourne également un \texttt{Signal}. Le nom \emph{fold} ne fait ainsi pas référence au passage d'une collection à un élément unique, mais à la combinaison successive des différents \emph{états} du signal parent.
+À l'inverse de la fonction \texttt{fold} présente sur les collections de la bibliothèque standard Scala qui retourne une unique valeur pour une collection, la fonction \texttt{fold} des signaux retourne également un \texttt{Signal}. Le nom \emph{fold} ne fait ainsi pas référence au passage d'une collection à un élément unique, mais à la combinaison successive des différents \emph{états} du signal parent.
 
 \begin{figure}[h]
 	\begin{lstlisting}
@@ -413,13 +413,13 @@ Cependant, les signaux ne sont pas limités à la construction d'interfaces web 
 	\item L'utilisation \emph{multi-threadée} d'un unique graphe de signaux
 	\item L'utilisation des signaux comme mécanisme de parallélisation
 \end{enumerate}
-Une analyse théorique de ces deux situations est effectuée dans les sections ci-après. \textit{Trouver mieux comme transition...}
+Le sections ci-après présentent une analyse théorique de ces deux approches avec des cas d'usages potentiels.
 
 \subsubsection{Utilisation \emph{multi-threadée} d'un unique graphe de signaux}
 
 Dans cette situation, un graphe unique de signaux est accédé parallèlement par de multiples \emph{threads} de l'application. La tâche de parallélisation est attribuée à l'utilisateur de la bibliothèque qui est alors responsable de déterminer le nombre de \emph{threads} à exécuter et leurs tâches respectives. Il attend du graphe de signaux un certain nombre de garanties:
 \begin{itemize}
-	\item Cohérence: les données stockées dans chaque nœuds du graphe doivent rester cohérentes par rapport à l'ensemble du graphe. Si un signal dépend d'un autre et que l'état de ces deux signaux est actuellement en cache, les valeurs de ces deux signaux doit correspondra à la relation qui les unis. La figure \ref{fig:sig-inconsistency} illustre une telle situation où les données en cache ne correspondent pas à la relation.
+	\item Cohérence: les données stockées dans chaque nœud du graphe doivent rester cohérentes par rapport à l'ensemble du graphe. Si un signal dépend d'un autre et que l'état de ces deux signaux est actuellement en cache, les valeurs de ces deux signaux doit correspondra à la relation qui les unis. La figure \ref{fig:sig-inconsistency} illustre une telle situation où les données en cache ne correspondent pas à la relation.
 	
 	\begin{figure}
 		\centering
@@ -447,10 +447,10 @@ Dans cette situation, un graphe unique de signaux est accédé parallèlement pa
 	
 	\item Sémantique des observateurs: dans une situation non-parallèle, un observateur est invoqué \emph{exactement une fois} lors de la fermeture du contexte de mutation et avant le retour au code utilisateur ayant initié la mutation. Que faire lorsque de multiples nœuds sont mis à jour de façon parallèle avec des observateurs attachés ? 
 	
-	Faut-il exécuter l'observateur une fois par mutation, avec des données potentiellement périmées ? Faut-il plutôt différé l'exécution de l'observateur jusqu'à ce que l'ensemble du graphe soit stabilisé ? Dans ce cas, quel \emph{thread} est responsable d'invoquer l'observateur ? Que faire si le graphe ne se stabilise jamais, c'est à dire
+	Faut-il exécuter l'observateur une fois par mutation, avec des données potentiellement périmées ? Faut-il plutôt différer l'exécution de l'observateur jusqu'à ce que l'ensemble du graphe soit stabilisé ? Dans ce cas, quel \emph{thread} est responsable d'invoquer l'observateur ? Que faire si le graphe ne se stabilise jamais, c'est-à-dire
 	que des modifications sont continuellement apportées aux données, l'observateur se retrouverait alors différé indéfiniment ?
 	
-	La problématique est identique en ce qui concerne les signaux différés puisqu'ils partage leur sémantique d'évaluation avec les observateurs. Est-ce que cela a toujours un sens dans un environnement parallèle ou est-il nécessaire d'établir des règles supplémentaires, spécifiques aux signaux différés.
+	La problématique est identique en ce qui concerne les signaux différés puisqu'ils partagent leur sémantique d'évaluation avec les observateurs. Est-ce que cela a toujours un sens dans un environnement parallèle ou est-il nécessaire d'établir des règles supplémentaires, spécifiques aux signaux différés ?
 \end{itemize}
 
 Toutes ces questions attestent de la difficulté d'établir des règles d'évaluation claires et simples dans un contexte \emph{multi-threadé}. Ce qui correspond à un cas d'utilisation peut ne pas être adapté à un autre.

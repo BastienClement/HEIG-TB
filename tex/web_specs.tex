@@ -16,22 +16,22 @@ Ainsi, par exemple, la classe \texttt{xuen.component.Element} est référencée 
 
 \subsection{Composant} \label{sec:web-usage-component}
 
-Un composant est la brique essentiel de construction d'une application. Il correspond directement à une définition d'un \emph{custom element}. Une fois défini, un composant peut être instancié un nombre quelconque de fois, selon les besoins de l'application.
+Un composant est la brique essentielle de construction d'une application. Il correspond directement à une définition d'un \emph{Custom Element} tel que défini par les standards web. Une fois défini, un composant peut être instancié un nombre quelconque de fois, selon les besoins de l'application.
 
 Un composant est défini à partir de:
 \begin{itemize}
-	\item Un sélecteur: correspondant à la balise HTML qui sera définie pour ce composant. Ce nom doit comporter un tiret (selon la spécification \emph{Custom Elements})
-	\item Une implémentation (§ \ref{sec:web-specs-element}): une sous-classe de \texttt{x.c.Element}, définissant le comportement des instances de ce composant
+	\item Un sélecteur: correspondant à la balise HTML qui sera définie pour ce composant. Ce nom doit comporter un tiret (selon la spécification \emph{Custom Elements}).
+	\item Une implémentation (§ \ref{sec:web-specs-element}): une sous-classe de \texttt{x.c.Element}, définissant le comportement des instances de ce composant.
 \end{itemize}
 Optionnellement, un composant peut également posséder:
 \begin{itemize}
-	\item Un template (§ \ref{sec:web-specs-template}): une structure HTML pouvant contenir des expressions de \emph{data-binding} avec des données réactives sous la forme de signaux, ce template sera matérialisé pour chaque instance du composant 
-	\item Une feuille de styles (§ \ref{sec:web-specs-stylesheet}): pouvant être utilisée pour définir l'apparence visuelle du composant
+	\item Un template (§ \ref{sec:web-specs-template}): une structure HTML pouvant contenir des expressions de \emph{data-binding} avec des données réactives sous la forme de signaux, ce template sera matérialisé pour chaque instance du composant.
+	\item Une feuille de styles (§ \ref{sec:web-specs-stylesheet}): pouvant être utilisée pour définir l'apparence visuelle du composant.
 	\item Une liste de dépendances: une liste d'autres composants devant être chargés avant ce composant, cette liste correspond à d'autres composants utilisés dans le template de ce composant.
 \end{itemize}
 
 \subsubsection{Déclaration}
-En pratique, un composant est créé en déclarant un \texttt{object} qui étend la classe \texttt{x.c.Component}. La classe correspondant à l'implémentation du composant est généralement déclarée simultanément avec le même nom, formant ainsi une paire (classe, objet compagnon) fréquent en Scala.
+En pratique, un composant est créé en déclarant un \texttt{object} qui étend la classe \texttt{x.c.Component}. La classe correspondant à l'implémentation du composant est généralement déclarée simultanément avec le même nom, formant ainsi une paire (classe, objet compagnon) fréquente en Scala.
 
 \begin{lstlisting}
 import xuen.component._
@@ -53,19 +53,19 @@ Ce court exemple illustre déjà la plupart des concepts utilisés dans la const
 
 \subsubsection{Interpolateurs \texttt{html} et \texttt{css}}
 
-Lors de la définition du template et de la feuille de style d'un composant, les interpolateurs \texttt{html} et \texttt{css} sont généralement utilisés. Ils sont une façon simple d'obtenir les objets de type \texttt{Template} et \texttt{Stylesheet} attendu par le constructeur de \texttt{Component} à partir de code source HTML ou CSS.
+Lors de la définition du template et de la feuille de style d'un composant, les interpolateurs \texttt{html} et \texttt{css} sont généralement utilisés. Ils sont une façon simple d'obtenir les objets de type \texttt{Template} et \texttt{Stylesheet} attendus par le constructeur de \texttt{Component} à partir de code source HTML ou CSS.
 
-Ces interpolateurs sont définis par la classe \texttt{x.c.Interpolations}. En Scala, l'implémentation de tels interpolateurs repose sur l'utilisation de conversions implicites qui ne sont généralement pas identifiées automatiquement par l'IDE. Il est ainsi nécessaire d'importer cette classe manuellement afin de les utiliser. Alternativement, il est possible d'importer l'ensemble du package \texttt{xuen.component} en utilisant une importation \texttt{wildcard}.
+Ces interpolateurs sont définis par la classe \texttt{x.c.Interpolations}. En Scala, l'implémentation de tels interpolateurs repose sur l'utilisation de conversions implicites qui ne sont généralement pas identifiées automatiquement par l'IDE. Il est ainsi nécessaire d'importer cette classe manuellement afin de les utiliser. Alternativement, il est possible d'importer l'ensemble du package \texttt{xuen.component} en utilisant une importation \emph{wildcard}.
 \begin{lstlisting}
 import xuen.component._
 \end{lstlisting}
 Cette méthode est généralement préférée à l'importation explicite.
 
-Le nom d'interpolateur est trompeur: contrairement à l'interpolateur \texttt{s} de la bibliothèque Scala, \texttt{html} et \texttt{css} ne supporte pas l'insertion de fragments à l'aide du symbole spécial \texttt{\$}. Ils sont cependant une façon concise d'appliquer un traitement à une chaîne de caractères, en l'occurrence la transformation en instance de \texttt{Template} ou \texttt{Stylesheet}. Ils sont également l'occasion pour l'IDE d'identifier le langage utilisé dans la chaîne de caractères et ainsi offrir une coloration syntaxique et une auto-complétion appropriée.
+Le nom d'interpolateur est trompeur: contrairement à l'interpolateur \texttt{s} de la bibliothèque Scala, \texttt{html} et \texttt{css} ne supportent pas l'insertion de fragments à l'aide du symbole spécial \texttt{\$}. Ils sont cependant une façon concise d'appliquer un traitement à une chaîne de caractères, en l'occurrence la transformation en instance de \texttt{Template} ou \texttt{Stylesheet}. Ils sont également l'occasion pour l'IDE d'identifier le langage utilisé dans la chaîne de caractères et ainsi offrir une coloration syntaxique et une auto-complétion appropriée.
 
 Dans le cas d'IntelliJ IDEA, il est possible d'associer des langages arbitraires avec un interpolateur. Il est ainsi possible d'associer l'interpolateur \texttt{html} avec le langage HTML, de même pour \texttt{css} avec CSS. Dès lors, le code du template ou de la feuille de style sera correctement traité comme HTML ou CSS dans l'éditeur.
 
-\subsubsection{Enregistrement et instantiation}
+\subsubsection{Enregistrement et instanciation}
 
 L'enregistrement du composant en tant que \emph{custom element} au niveau du navigateur se fait automatiquement lors de la construction de l'objet singleton \texttt{x.c.Component} de ce composant.
 
@@ -94,7 +94,7 @@ div.innerHTML = "<hello-world></hello-world>"
 
 Dans les deux premiers cas, l'objet \texttt{Component} est référencé directement ou indirectement et il n'est pas nécessaire de se préoccuper de l'enregistrement. Ce sont les méthodes préférées lorsque le composant est instancié par le code du développeur et non le navigateur lui-même.
 
-Les deux autre méthodes se basent sur l'API native du navigateur et ne référencent à aucun moment l'objet \texttt{Component}. Ces méthodes n'enregistrent ainsi pas le composant au niveau du navigateur. Dans une telle situation, la fonction \texttt{Component.register} peut être utilisée pour forcer une référence vers l'objet \texttt{Component}. Un nombre arbitraire de composant peuvent être passés à \texttt{register}.
+Les deux autre méthodes se basent sur l'API native du navigateur et ne référencent à aucun moment l'objet \texttt{Component}. Ces méthodes n'enregistrent ainsi pas le composant au niveau du navigateur. Dans une telle situation, la fonction \texttt{Component.register} peut être utilisée pour forcer une référence vers l'objet \texttt{Component}. Un nombre arbitraire de composants peuvent être passés à \texttt{register}.
 \begin{lstlisting}
 Component.register(HelloWorld, AnotherComponent, ...)
 \end{lstlisting}
@@ -119,16 +119,18 @@ class HelloWorld extends Element(component = HelloWorld)
 La déclaration ci-dessus est donc suffisante pour la définition d'un comportement de composant valide. La classe \texttt{Element} offre de nombreux outils aux instances de ses sous-classes.
 
 \subsubsection{Interface \texttt{HTMLElement}}
-\texttt{Element} hérite de l'interface \texttt{HTMLElement}, définie par le navigateur et les standards web. Cette interface hérite à son tour d'un ensemble d'autres interfaces tels que \texttt{dom.Element}\footnote{La spécification DOM défini également une interface \texttt{Element}, à distinguer de la classe abstraite \texttt{xuen.component.Element} qui est une implémentation spécifique de cette interface. En pratique, l'interface \texttt{x.c.Element} est rarement utilisée par le code utilisateur, et l'interface DOM est généralement utilisée en tant que \texttt{dom.Element} en Scala.js}, \texttt{dom.Node}, \texttt{EventTarget}.
+\texttt{Element} hérite de l'interface \texttt{HTMLElement}, définie par le navigateur et les standards web. Cette interface hérite à son tour d'un ensemble d'autres interfaces telles que \texttt{dom.Element}\footnote{La spécification DOM définit également une interface \texttt{Element}, à distinguer de la classe abstraite \texttt{xuen.component.Element} qui est une implémentation spécifique de cette interface. En pratique, l'interface \texttt{x.c.Element} est rarement utilisée par le code utilisateur, et l'interface DOM est généralement utilisée en tant que \texttt{dom.Element} en Scala.js}, \texttt{dom.Node}, \texttt{EventTarget}.
 
-Une instance de \texttt{Element} possède donc les méthodes et attributs usuels des éléments HTML, tel que par exemple \texttt{style}, \texttt{parentNode}, \texttt{querySelector} ou \texttt{addEventListener}. C'est aussi un argument valide pour les méthodes de manipulation du DOM tel que \texttt{appendChild} ou \texttt{replaceChild}.
+Une instance de \texttt{Element} possède donc les méthodes et attributs usuels des éléments HTML, tel que par exemple \texttt{style}, \texttt{parentNode}, \texttt{querySelector} ou \texttt{addEventListener}. C'est aussi un argument valide pour les méthodes de manipulation du DOM telles que \texttt{appendChild} ou \texttt{replaceChild}.
+
+La chaîne d'héritage d'un \texttt{Element} Xuen est alors compatible avec les standards web, qui impose à la classe utilisée lors de la définition d'étendre \texttt{HTMLElement}.
 
 \subsubsection{ShadowRoot}
-Xuen se base sur les mécanismes du \emph{Shadow DOM} pour implémenter templates et feuilles de styles. Chaque instance d'un composant est ainsi associée à un sous-arbre Shadow DOM, accessible depuis l'attribut \texttt{shadow} définie par la classe \texttt{Element}.
+Xuen se base sur les mécanismes du \emph{Shadow DOM} pour implémenter templates et feuilles de styles. Chaque instance d'un composant est ainsi associée à un sous-arbre Shadow DOM, accessible depuis l'attribut \texttt{shadow} défini par la classe \texttt{Element}.
 
-Cet attribut est similaire à l'attribut \texttt{shadowRoot} définie par la spécification Shadow DOM à la différence que \texttt{shadow} est garanti d'être non-nul. Un sous-arbre Shadow DOM est automatiquement construit lors de l'accès à l'attribut si celui-ci n'existe pas. Un sous-arbre Shadow DOM est également automatiquement construit si le composant a défini un template ou une feuille de style et sera initialement peuplé par les éléments correspondants.
+Cet attribut est similaire à l'attribut \texttt{shadowRoot} définie par la spécification Shadow DOM à la différence que \texttt{shadow} est garanti d'être non-nul. Un sous-arbre Shadow DOM est automatiquement construit lors de l'accès à l'attribut si celui-ci n'existe pas. Un sous-arbre Shadow DOM est également automatiquement construit si le composant a défini un template ou une feuille de style.
 
-Il est généralement déconseillé de manipuler le sous-arbre Shadow DOM manuellement. Ceci est en général effectué de façon déclarative à partir du template. Il peut cependant être nécessaire d'accéder à l'instance d'un élément présent dans le sous arbre à partir de l'implémentation du composant. Dans une telle situation \texttt{querySelector} peut être utilisé à partir de \texttt{shadow} pour accéder aux éléments du sous-arbre.
+Il est généralement déconseillé de manipuler le sous-arbre Shadow DOM manuellement. Ceci est en général effectué de façon déclarative à partir du template. Il peut cependant être nécessaire d'accéder à l'instance d'un élément présent dans le sous-arbre à partir de l'implémentation du composant. Dans une telle situation \texttt{querySelector} peut être utilisé à partir de \texttt{shadow} pour accéder aux éléments du sous-arbre.
 
 \begin{lstlisting}
 class HelloWorld extends Element(HelloWorld) {
@@ -164,7 +166,7 @@ object HelloWorld extends Component[HelloWorld](
 \subsubsection{Attributs}
 Les attributs jouent un rôle similaire aux arguments de constructeur en HTML, ils sont un mécanisme permettant de passer des paramètres à un élément afin de configurer son comportement.
 
-Un élément Xuen peut définir un ensemble de paramètre auxquels il souhaite avoir accès sous forme d'un signal \texttt{Source}. La valeur de l'attribut sera reflétée dans le signal correspondant. Cette association est \emph{live}, c'est à dire que l'attribut sera automatiquement observé et la valeur du signal sera mise à jour si un événement externe venait à modifier sa valeur. Inversement, un changement de la valeur de la source entraînera automatiquement une mise à jour de l'attribut HTML correspondant.
+Un élément Xuen peut définir un ensemble de d'attributs auxquels il souhaite avoir accès sous forme d'un signal \texttt{Source}. La valeur de l'attribut sera reflétée dans le signal correspondant. Cette association est \emph{live}, c'est à dire que l'attribut sera automatiquement observé et la valeur du signal sera mise à jour si un événement externe venait à modifier sa valeur. Inversement, un changement de la valeur de la source entraînera automatiquement une mise à jour de l'attribut HTML correspondant.
 
 Un \emph{binding} d'attribut est déclaré en utilisant la méthode \texttt{attribute[T]}, produisant un \texttt{Source} de type \texttt{T} pour l'attribut. Le nom de l'attribut est automatiquement déterminé en fonction du nom de la variable à laquelle cette source est associée.
 
@@ -276,9 +278,9 @@ La valeur de l'attribut est évaluée en tant qu'expression et la valeur obtenue
 --> $0.value == "4"
 \end{lstlisting}
 
-Il est important de souligner que ce type d'annotation n'affecte pas les \emph{attributs} de l'élément mais bien les \emph{propriétés} de l'objet JavaScript correspondant. C'est pourquoi dans l'exemple ci-dessus il n'y a pas d'attribut \texttt{value} présent sur l'élément \texttt{<input>}, mais \texttt{\$0.value} retourne effectivement la chaîne de caractères \texttt{"4"}\footnote{La notation \texttt{\$0} est inspirée de l'inspecteur web de Google Chrome, dans lequel la variable \texttt{\$0} fait référence à l'élément actuellement sélectionner dans l'inspecteur DOM.}.
+Il est important de souligner que ce type d'annotation n'affecte pas les \emph{attributs} de l'élément mais bien les \emph{propriétés} de l'objet JavaScript correspondant. C'est pourquoi dans l'exemple ci-dessus il n'y a pas d'attribut \texttt{value} présent sur l'élément \texttt{<input>}, mais \texttt{\$0.value} retourne effectivement la chaîne de caractères \texttt{"4"}\footnote{La notation \texttt{\$0} est inspirée de l'inspecteur web de Google Chrome, dans lequel la variable \texttt{\$0} fait référence à l'élément actuellement sélectionné dans l'inspecteur DOM.}.
 
-Si aucune valeur n'est fournie pour l'annotation de propriété, la nom de la propriété est utilisée comme expression. Ainsi, une annotation \texttt{[foo]} est traitée en tant que \texttt{[foo]="foo"}, offrant ainsi une syntaxe raccourcie dans le cas où une propriété d'un élément parent est passée tel quel à une propriété du même nom dans un élément enfant.
+Si aucune valeur n'est fournie pour l'annotation de propriété, la nom de la propriété est utilisée comme expression. Ainsi, une annotation \texttt{[foo]} est traitée en tant que \texttt{[foo]="foo"}, offrant ainsi une syntaxe raccourcie dans le cas où une propriété d'un élément parent est passée telle quelle à une propriété du même nom dans un élément enfant.
 
 \subsubsection{Annotation d'événement}
 
@@ -329,19 +331,19 @@ Dans le cas des annotations basiques, cela n'a généralement pas d'importance, 
 
 \begin{lstlisting}[language=HTML]
 <div><span>...</span> ??*if="..."??text <span>...</span></div>
---> Nothing to put the `*if` on ?!
+--> Aucun élément sur lequel placer le `*if`
 \end{lstlisting}
 
-Au autre situation problématique est l'annotation simultanée de plusieurs éléments. Comment faire lorsque une transformation \texttt{*for} doit produire deux éléments DOM pour chaque élément de l'itération ? Dans l'exemple ci-dessous, chaque \emph{checkbox} est associée à un label.
+Au autre situation problématique est l'annotation simultanée de plusieurs éléments. Comment faire lorsqu'une transformation \texttt{*for} doit produire deux éléments DOM pour chaque élément de l'itération ? Dans l'exemple ci-dessous, chaque \emph{checkbox} est associée à un label.
 
 \begin{lstlisting}[language=HTML]
 <input *for="i of [1, 2]" type="checkbox" [value]="i">
 <span *for="i of [1, 2]">{{i}}</span>
 \end{lstlisting}
 
-Cet exemple produit une liste de 3 \emph{checkboxes} puis 3 labels, certainement pas le résultat escompté.
+Cet exemple produit une liste de 3 \emph{checkboxes} puis 3 labels, ce qui n'est certainement pas le résultat escompté.
 
-Une solution serait d'encapsuler les noeuds à annoter dans une élément neutre tel que \texttt{<div>} ou \texttt{<span>} et d'annoter cet élément. Cette solution est relativement simple et est généralement la méthode préférée dans ce genre de situation.
+Une solution serait d'encapsuler les noeuds à annoter dans un élément neutre tel que \texttt{<div>} ou \texttt{<span>} et d'annoter cet élément. Cette solution est relativement simple et est généralement la méthode préférée dans ce genre de situation.
 
 Cependant, l'ajout d'un élément supplémentaire peut avoir des effets secondaires indésirables, par exemple au niveau des sélecteurs CSS. Dans le cas d'une itération, ceci n'est pas toujours possible. Dans ces situations, il est possible d'utiliser un élément \texttt{<template>} afin d'encapsuler un nombre quelconque de sous-noeuds DOM.
 
@@ -353,6 +355,16 @@ Cependant, l'ajout d'un élément supplémentaire peut avoir des effets secondai
 \end{lstlisting}
 
 Lorsqu'une transformation est appliquée sur un élément \texttt{<template>}, cet élément est supprimé du sous-arbre DOM produit par la transformation et seul son contenu est inséré. Il se substitue ainsi à l'élément encapsulant mentionné précédemment et disparait totalement lors de l'application de la transformation.
+
+\subsubsection{Composition DOM avec \texttt{<slot>}}
+
+Lorsqu'un élément possède un sous-arbre \emph{shadow DOM}, les enfants de son \emph{light DOM}, c'est-à-dire ceux qui ne sont pas dans le sous-arbre caché, sont ignorés et seul le sous-arbre caché est utilisé pour déterminer l'apparence et la structure de l'élément.
+
+À l'intérieur du template, résidant dans le sous-arbre caché, le développeur a la possibilité d'inviter explicitement les éléments du \emph{light DOM} avec l'élément spécial \texttt{<slot>}, afin de \emph{composer} les deux arbres en un seul.
+
+Il est par exemple possible de construire un composant "boîte", définissant une structure réutilisable à appliquer autour d'un contenu arbitraire. Le contenu à proprement parler est alors placé dans le \emph{light DOM} de la boîte et sera inclut à la place de l'élément \texttt{<slot>} présent dans le \emph{shadow DOM} de cette même boîte.
+
+Ce mécanisme est défini par la spécification \emph{Shadow DOM} et réutilisé tel quel par les composants Xuen. Le document mentionné dans la partie d'introduction sur \emph{Shadow DOM} (§ \ref{sec:web-about-webcomponents}) présente l'élément \texttt{<slot>} plus en détail, notamment ses interactions avec les feuilles de styles et le concept de \emph{slots} nommés permettant la définition de multiples points d'insertion dans un même template.
 
 \subsection{Expressions} \label{sec:web-usage-expr}
 Les expressions sont à la base des comportements dynamiques dans les templates Xuen. Elles sont fortement inspirées de la syntaxe de JavaScript et suivent en grande partie la sémantique de celui-ci.
@@ -384,8 +396,10 @@ object HelloWorld extends Component[HelloWorld](
 	\caption{Exemple illustrant l'extraction automatique des valeurs \texttt{Signal} lors de l'évaluation d'une expression}
 \end{figure}
 
+Les expressions disposent également de l'opérateur d'affectation \texttt{:=} pouvant être utilisé afin de modifier la valeur d'un signal \texttt{Source}. L'expression à la gauche de l'opérateur doit s'évaluer en une instance de \texttt{Source} pour constituer un usage valide de l'opérateur. Il ne peut pas être utilisé pour modifier une variable qui n'est pas un signal ou déclarer de nouveau signaux.
+
 \subsubsection{Contexte d'évaluation}
-Une expression est toujours évaluée par rapport à un contexte spécifique. Ce contexte défini le monde extérieur autour de l'expression. Il est pas exemple utilisé lorsque l'expression fait référence à des variables ou des fonctions. Dans ce cas, le contexte est invoqué pour obtenir la valeur de cette variable.
+Une expression est toujours évaluée par rapport à un contexte spécifique. Ce contexte définit le monde extérieur autour de l'expression. Il est par exemple utilisé lorsque l'expression fait référence à des variables ou des fonctions. Dans ce cas, le contexte est invoqué pour obtenir la valeur de cette variable.
 
 Dans la plupart des cas, le contexte d'une expression sera l'\texttt{Element} auquel le template est associé. Les variables et les fonctions invoquées correspondent respectivement aux propriétés et méthodes de l'objet \texttt{Element}.
 
@@ -416,20 +430,20 @@ class HelloWorld extends Element(HelloWorld) {
 \end{lstlisting}
 
 \subsubsection{Opérateur d'accès protégé \texttt{?.}}
-L'opérateur \texttt{?.} est similaire à l'usage à l'opérateur simple \texttt{.}: il permet d'accéder à une propriété ou une méthode de l'expression à sa gauche et prend un identifier à sa droite pour identifier la propriété accédée.
+L'opérateur \texttt{?.} est similaire à l'usage à l'opérateur simple \texttt{.}: il permet d'accéder à une propriété ou une méthode de l'expression à sa gauche et prend un identifiant à sa droite pour déterminer la propriété référencée.
 
-En revanche, lorsque l'expression à gauche de l'opérateur \texttt{.} est \texttt{undefined}, tenter de l'indexer avec l'opérateur \texttt{.} provoque une erreur. Ceci est utile en phase de développement pour identifier les situations où une référence qui ne devrait pas être indéfinie l'est tout de même.
+En revanche, lorsque l'expression à gauche de l'opérateur \texttt{.} est \texttt{undefined} ou \texttt{null}, tenter de l'indexer avec l'opérateur \texttt{.} provoque une erreur. Ceci est utile en phase de développement pour identifier les situations où une référence qui ne devrait pas être indéfinie l'est tout de même.
 
-Dans le cas où il est normale que le membre de gauche puisse être \texttt{undefined}, l'usage de l'opérateur protégé \texttt{?.} ne provoque pas d'erreur et retourne simplement \texttt{undefined} à son tour, permettant ainsi de le chaîner autant de fois que nécessaire. Si la référence indexée est définie, l'opérateur \texttt{?.} se comporte de façon identique à l'opérateur \texttt{.} classique.
+Dans le cas où il est possible et normal que le membre de gauche soit indéfini, l'usage de l'opérateur protégé \texttt{?.} ne provoque pas d'erreur et retourne simplement \texttt{undefined} à son tour, permettant ainsi de le chaîner autant de fois que nécessaire. Si la référence indexée est définie, l'opérateur \texttt{?.} se comporte de façon identique à l'opérateur \texttt{.} classique.
 
 \subsection{Feuille de styles} \label{sec:web-specs-stylesheet}
 La feuille de styles d'un composant est un simple fragment de code CSS qui sera injecté dans le sous-arbre Shadow DOM d'un composant. Aucun traitement particulier n'est appliqué au code source CSS.
 
-La feuille de styles est injectée sous la forme d'un élément \texttt{<style>} contentant les définitions CSS. Puisque cet élément est placé dans un sous-arbre DOM, la portée de ses sélecteurs est limitée à ce sous-arbre. Il n'y a donc pas de conflits au niveau des identifiant des éléments du template (attribut \texttt{id}) ou du nom des classes, conduisant à des sélecteur extrêmement simples et concis.
+La feuille de styles est injectée sous la forme d'un élément \texttt{<style>} contentant les définitions CSS. Puisque cet élément est placé dans un sous-arbre DOM, la portée de ses sélecteurs est limitée à ce sous-arbre. Il n'y a donc pas de conflits au niveau des identifiants des éléments du template (attribut \texttt{id}) ou du nom des classes, conduisant à des sélecteur extrêmement simples et concis.
 
 Spécifiquement l'élément \texttt{<style>} est inséré en tant que dernier enfant du sous-arbre Shadow DOM. Ce qui a pour implication que le dernier élément du template ne vérifie pas le sélecteur \texttt{:last-child}, puisque l'élément \texttt{<style>} est en pratique le dernier élément du template. En revanche, le sélecteur \texttt{:first-child} identifie correctement le premier élément dans le template. Si l'usage du sélecteur \texttt{:last-child} s'impose, il est possible d'envelopper le template dans un élément \emph{wrapper} et ainsi ignorer la présence de l'élément \texttt{<style>} en tant que dernier fils du sous-arbre.
 
-Il est possible de faire référence à l'élément hôte lui même, c'est à dire l'élément possédant la racine du sous-arbre Shadow DOM, avec le sélecteur \texttt{:host}. La version fonctionnelle de ce sélecteur (\texttt{:host(selector)}) permet de faire référence à l'élément hôte uniquement si celui-ci vérifie également le sélecteur passé en paramètre.
+Il est possible de faire référence à l'élément hôte lui même, c'est-à-dire l'élément possédant la racine du sous-arbre Shadow DOM, avec le sélecteur \texttt{:host}. La version fonctionnelle de ce sélecteur (\texttt{:host(selector)}) permet de faire référence à l'élément hôte uniquement si celui-ci vérifie également le sélecteur passé en paramètre.
 
 L'élément sélectionné par le sélecteur \texttt{:host} correspond à l'élément personnalisé lui-même, qui est également accessible en dehors du sous-arbre Shadow DOM. Dans le cas où une propriété CSS est définie à la fois à l'intérieur (par la feuille de styles de l'élément lui-même) et à l'extérieur du sous-arbre Shadow DOM (par une feuille de styles dans le contexte parent), la définition extérieur s'applique et la définition intérieur est ignorée. Par exemple, la marge interne d'un élément \texttt{<hello-world>} dont la feuille de styles contiendrait \texttt{:host \{ padding: 12px; \}} pourrait être modifiée en spécifiant: \texttt{hello-world \{ padding: 0px; \}} dans la feuille de styles de l'élément parent (ou du document).
 
@@ -461,9 +475,7 @@ Les variables CSS sont la méthodes préférée pour paramétrer l'apparence d'u
 
 Le concept de Service est utilisé lorsqu'un objet doit être partagé entre plusieurs composants de l'application. Celui-ci est alors créé en tant qu'objet singleton étendant la classe \texttt{x.s.Service}.
 \begin{lstlisting}
-object MyService extends Service {
-	...
-}
+object MyService extends Service { ... }
 \end{lstlisting}
 
 Un service peut alors être \emph{utilisé} par un élément en appelant la méthode \texttt{Service.use} qui retourne le service passé en paramètre.
@@ -477,6 +489,6 @@ En interne, un service possède un compteur du nombre d'éléments actuellement 
 
 En pratique, la désactivation d'un service est différée de 5 secondes par rapport à la déconnexion du dernier élément afin de laisser l'occasion à un nouvel élément utilisant le service d'être connecté dans l'intervalle et éviter ainsi un cycle désactivation-activation, par exemple lors de la navigation entre plusieurs vues de l'application.
 
-Le concept de service a pour objectif principal de permettre l'implémentation de sources de données pour les composants. Ceux-ci utilisent le service fournissant les informations dont ils ont besoin et le service est en mesure de récupérer ces informations depuis le serveur de façon centralisée entre tous les composants de l'application. Plus spécifiquement, le mécanisme d'activation et désactivation du service a pour but d'offrir à son implémentation une chance de signaler au serveur que les événements de mises à jour des données qu'il fourni l'intéressent ou ne l'intéressent plus.
+Le concept de service a pour objectif principal de permettre l'implémentation de sources de données pour les composants. Ceux-ci utilisent le service fournissant les informations dont ils ont besoin et le service est en mesure de récupérer ces informations depuis le serveur de façon centralisée entre tous les composants de l'application. Plus spécifiquement, le mécanisme d'activation et désactivation du service a pour but d'offrir à son implémentation une chance de signaler au serveur que les événements de mises à jour des données qu'il fournit l'intéressent ou ne l'intéressent plus.
 
 L'utilisation de la fonction \texttt{Service.use} est indispensable. Celle-ci utilise en effet une référence implicite à l'élément à l'origine de l'invocation et se charge d'enregistrer des gestionnaires pour les événements \texttt{xuen:connected} et \texttt{xuen:disconnected}, fondamentaux au fonctionnement du mécanisme d'activation à la demande des services.
